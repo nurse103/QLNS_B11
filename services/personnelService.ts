@@ -27,9 +27,29 @@ export interface Employee {
     ngay_vao_dang: string | null;
     ngay_chinh_thuc: string | null;
     so_the_dang: string | null;
+
     ngay_cap_the_dang: string | null;
+    doi_tuong: string | null;
     created_at?: string;
 }
+
+// ... existing interfaces ...
+
+export const bulkUpdatePersonnel = async (ids: number[], updates: Partial<Employee>) => {
+    const { error } = await supabase
+        .from('dsnv')
+        .update(updates)
+        .in('id', ids);
+
+    if (error) {
+        console.error('Error bulk updating personnel:', error);
+        throw error;
+    }
+};
+
+export const updatePersonnelStatus = async (ids: number[], status: string) => {
+    return bulkUpdatePersonnel(ids, { trang_thai: status });
+};
 
 export interface Family {
     id?: number;
@@ -86,7 +106,7 @@ export const getPersonnel = async () => {
     const { data, error } = await supabase
         .from('dsnv')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('ho_va_ten', { ascending: true });
 
     if (error) {
         console.error('Error fetching personnel:', error);

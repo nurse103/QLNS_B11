@@ -39,7 +39,7 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, o
 
         // Header
         const header = days.map(day => (
-            <div key={day} className="text-center font-bold text-slate-500 py-2 bg-slate-50">
+            <div key={day} className="text-center font-bold text-white py-2 bg-[#009900]">
                 {day}
             </div>
         ));

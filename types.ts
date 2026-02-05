@@ -34,6 +34,7 @@ export interface Employee {
   ngay_chinh_thuc: string | null;
   so_the_dang: string | null;
   ngay_cap_the_dang: string | null;
+  doi_tuong: string | null;
   created_at?: string;
 }
 
@@ -55,3 +56,19 @@ export interface Schedule {
   trang_thai?: string;
   created_at?: string;
 }
+
+export interface LeaveRecord {
+  id: number;
+  dsnv_id: number | null;
+  ho_va_ten: string | null;
+  cap_bac: string | null;
+  chuc_vu: string | null;
+  loai_nghi: string | null;
+  tu_ngay: string | null;
+  den_ngay: string | null;
+  ly_do_nghi: string | null;
+  noi_dang_ky_nghi: string | null;
+  ghi_chu: string | null;
+  created_at?: string;
+}
+
