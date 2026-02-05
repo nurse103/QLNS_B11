@@ -2,15 +2,25 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
 // Initialize Gemini AI Client
 // Note: In a real production app, ensure your API key is secure.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("Gemini API Key is missing!");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const generateHRResponse = async (
   prompt: string,
   onStream: (text: string) => void
 ): Promise<string> => {
   try {
-    const modelId = 'gemini-3-flash-preview'; 
-    
+    const modelId = 'gemini-3-flash-preview';
+
+    const ai = getAiClient();
+    if (!ai) return "Chưa cấu hình API Key. Vui lòng liên hệ Admin.";
+
     // System instruction to behave like an HR expert
     const chat = ai.chats.create({
       model: modelId,
@@ -23,7 +33,7 @@ export const generateHRResponse = async (
     });
 
     const result = await chat.sendMessageStream({ message: prompt });
-    
+
     let fullText = '';
     for await (const chunk of result) {
       const c = chunk as GenerateContentResponse;
