@@ -11,18 +11,31 @@ interface ScheduleFormProps {
 }
 
 export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose, onSuccess }) => {
+    const toLocalInputFormat = (dateStr?: string) => {
+        if (!dateStr) return '';
+        // If it doesn't look like UTC/ISO with timezone, assume it's already local input format
+        if (!dateStr.includes('Z') && !dateStr.includes('+')) return dateStr;
+
+        const date = new Date(dateStr);
+        const offset = date.getTimezoneOffset() * 60000;
+        const localDate = new Date(date.getTime() - offset);
+        return localDate.toISOString().slice(0, 16);
+    };
+
     const [formData, setFormData] = useState<Partial<Schedule>>({
         noi_dung: '',
         chi_tiet: '',
-        ngay_bat_dau: '',
-        ngay_ket_thuc: '',
         nguoi_thuc_hien: [],
         file_dinh_kem: null,
-        ...initialData
+        ...initialData,
+        // Override dates with local format for input
+        ngay_bat_dau: toLocalInputFormat(initialData?.ngay_bat_dau),
+        ngay_ket_thuc: toLocalInputFormat(initialData?.ngay_ket_thuc),
     });
 
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [uploading, setUploading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         getPersonnel().then(setEmployees);
@@ -49,16 +62,6 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose
         }
     };
 
-    const handlePersonnelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-        // Since this is a native select multiple, it replaces the array. 
-        // For better UX, a custom multi-select dropdown is usually preferred, but native works for MVP.
-        // However, native multi-select needs Ctrl+Click. 
-        // Let's implement a simple checkbox list or Tag input style if desired, 
-        // but for now, let's stick to a simple multi-select or a tailored UI.
-        // Given the request "cho phép chọn nhiều người", I'll use a checkbox list for better UX than native multi-select box.
-    };
-
     const toggleEmployee = (id: string) => {
         setFormData(prev => {
             const current = prev.nguoi_thuc_hien || [];
@@ -78,10 +81,17 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose
         }
 
         try {
-            if (formData.id) {
-                await updateSchedule(formData.id, formData);
+            // Convert local input time back to UTC ISO string for preservation
+            const payload = {
+                ...formData,
+                ngay_bat_dau: formData.ngay_bat_dau ? new Date(formData.ngay_bat_dau).toISOString() : null,
+                ngay_ket_thuc: formData.ngay_ket_thuc ? new Date(formData.ngay_ket_thuc).toISOString() : null
+            };
+
+            if (payload.id) {
+                await updateSchedule(payload.id, payload);
             } else {
-                await createSchedule(formData as any);
+                await createSchedule(payload as any);
             }
             onSuccess();
         } catch (error) {
@@ -122,7 +132,7 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose
                                 <input
                                     type="datetime-local"
                                     name="ngay_bat_dau"
-                                    value={formData.ngay_bat_dau ? new Date(formData.ngay_bat_dau).toISOString().slice(0, 16) : ''}
+                                    value={formData.ngay_bat_dau || ''}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     required
@@ -133,7 +143,7 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose
                                 <input
                                     type="datetime-local"
                                     name="ngay_ket_thuc"
-                                    value={formData.ngay_ket_thuc ? new Date(formData.ngay_ket_thuc).toISOString().slice(0, 16) : ''}
+                                    value={formData.ngay_ket_thuc || ''}
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                     required
@@ -154,18 +164,62 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Người thực hiện</label>
-                            <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-2 grid grid-cols-2 gap-2">
-                                {employees.map(emp => (
-                                    <label key={emp.id} className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
-                                        <input
-                                            type="checkbox"
-                                            checked={(formData.nguoi_thuc_hien || []).includes(emp.id.toString())}
-                                            onChange={() => toggleEmployee(emp.id.toString())}
-                                            className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                                        />
-                                        <span>{emp.ho_va_ten}</span>
-                                    </label>
-                                ))}
+
+                            {/* Selected Tags */}
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {(formData.nguoi_thuc_hien || []).map(id => {
+                                    const emp = employees.find(e => e.id.toString() === id);
+                                    return (
+                                        <span key={id} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full flex items-center gap-1 border border-blue-100">
+                                            {emp?.ho_va_ten || id}
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleEmployee(id)}
+                                                className="hover:text-blue-900"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </span>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Search and Dropdown */}
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Tìm kiếm nhân viên..."
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                                <div className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg">
+                                    {employees
+                                        .filter(emp =>
+                                            !searchTerm ||
+                                            emp.ho_va_ten.toLowerCase().includes(searchTerm.toLowerCase())
+                                        )
+                                        .map(emp => (
+                                            <div
+                                                key={emp.id}
+                                                onClick={() => {
+                                                    if (!(formData.nguoi_thuc_hien || []).includes(emp.id.toString())) {
+                                                        toggleEmployee(emp.id.toString());
+                                                    }
+                                                }}
+                                                className={`px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 flex items-center justify-between
+                                                ${(formData.nguoi_thuc_hien || []).includes(emp.id.toString()) ? 'bg-blue-50 text-blue-700' : 'text-slate-700'}
+                                            `}
+                                            >
+                                                <span>{emp.ho_va_ten}</span>
+                                                {(formData.nguoi_thuc_hien || []).includes(emp.id.toString()) && (
+                                                    <span className="text-xs text-blue-500">Đã chọn</span>
+                                                )}
+                                            </div>
+                                        ))}
+                                    {employees.length > 0 && employees.filter(emp => !searchTerm || emp.ho_va_ten.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                                        <div className="px-3 py-2 text-sm text-slate-500 text-center">Không tìm thấy kết quả</div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -217,7 +271,7 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({ initialData, onClose
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };

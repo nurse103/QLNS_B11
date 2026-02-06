@@ -28,12 +28,25 @@ import {
   Monitor,
   BriefcaseMedical,
   Shirt,
-  User
+  User,
+  Trash2,
+  X,
+  Save,
+  Plus,
+  Eye,
+  Edit
 } from 'lucide-react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { MenuItem } from './types';
 import { Assistant } from './components/Assistant';
 import { ScheduleModule } from './components/ScheduleModule';
+import { Login } from './components/Login';
+import { Settings as SettingsPage } from './components/Settings';
+import { User as AuthUser } from './services/authService';
+import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
+import * as XLSX from 'xlsx';
+import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
+import { LeaveModule } from './components/LeaveModule';
 
 // Charts
 import {
@@ -231,11 +244,7 @@ const Dashboard = () => {
   );
 };
 
-import * as XLSX from 'xlsx';
-import { getPersonnel, bulkCreatePersonnel, createPersonnel, updatePersonnel, bulkUpdatePersonnel, getEmployeeDetails, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
-import { X, Save, Plus, Trash2, Eye, Edit } from 'lucide-react';
-import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
-import { LeaveModule } from './components/LeaveModule';
+
 
 const PersonnelList = () => {
   const [personnel, setPersonnel] = useState<Employee[]>([]);
@@ -400,6 +409,19 @@ const PersonnelList = () => {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa nhân viên này không? Hành động này không thể hoàn tác.")) {
+      try {
+        await deletePersonnel(id);
+        alert("Đã xóa nhân viên thành công!");
+        fetchData();
+      } catch (error) {
+        console.error("Failed to delete personnel:", error);
+        alert("Có lỗi xảy ra khi xóa nhân viên.");
+      }
+    }
+  };
+
   const addItem = (listName: string, item: any, setItem: any, setList: any) => {
     setList((prev: any) => [...prev, item]);
     setItem({});
@@ -516,7 +538,7 @@ const PersonnelList = () => {
 
   const filteredPersonnel = (personnel || []).filter(emp => {
     if (filterType === 'all') return true;
-    return emp.dien_quan_ly === filterType;
+    return emp.doi_tuong === filterType;
   });
 
   return (
@@ -575,7 +597,7 @@ const PersonnelList = () => {
 
         {/* Quick Filters */}
         <div className="px-4 pb-4 flex gap-2">
-          {['all', 'Cán bộ quản lý', 'Quân lực quản lý', 'LĐHĐ'].map((type) => (
+          {['all', 'Sĩ quan', 'QNCN', 'LĐHĐ'].map((type) => (
             <button
               key={type}
               onClick={() => setFilterType(type)}
@@ -665,6 +687,13 @@ const PersonnelList = () => {
                             title="Chỉnh sửa"
                           >
                             <Edit size={16} /> Sửa
+                          </button>
+                          <button
+                            onClick={() => handleDelete(emp.id)}
+                            className="text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2 py-1 hover:bg-red-50 rounded"
+                            title="Xóa"
+                          >
+                            <Trash2 size={16} /> Xóa
                           </button>
                         </div>
                       </td>
@@ -1177,6 +1206,29 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  const handleLogin = (loggedInUser: AuthUser) => {
+    setUser(loggedInUser);
+    localStorage.setItem('user', JSON.stringify(loggedInUser));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    setUserMenuOpen(false);
+  };
+
+  if (!user) {
+    return <Login onLogin={handleLogin} />;
+  }
 
   const menuItems: MenuItem[] = [
     {
@@ -1306,8 +1358,8 @@ function App() {
                     AD
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-slate-700">Admin User</p>
-                    <p className="text-xs text-slate-500">Quản trị viên</p>
+                    <p className="text-sm font-medium text-slate-700">{user?.full_name || user?.username || 'Admin'}</p>
+                    <p className="text-xs text-slate-500">{user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</p>
                   </div>
                   <ChevronDown size={16} className={`text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -1329,7 +1381,7 @@ function App() {
                     </div>
                     <div className="h-px bg-slate-100 my-1"></div>
                     <div className="py-1">
-                      <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                         <LogOut size={16} /> Đăng xuất
                       </button>
                     </div>
@@ -1356,7 +1408,7 @@ function App() {
               <Route path="/duty" element={<PlaceholderPage title="Lịch trực" />} />
               <Route path="/schedule" element={<ScheduleModule />} />
               <Route path="/assets" element={<PlaceholderPage title="Quản lý tài sản" />} />
-              <Route path="/settings" element={<PlaceholderPage title="Cài đặt hệ thống" />} />
+              <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
 

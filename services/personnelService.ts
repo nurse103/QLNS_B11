@@ -41,6 +41,8 @@ export const bulkUpdatePersonnel = async (ids: number[], updates: Partial<Employ
         .update(updates)
         .in('id', ids);
 
+    console.log("Bulk Update Payload:", { ids, updates });
+
     if (error) {
         console.error('Error bulk updating personnel:', error);
         throw error;
@@ -238,5 +240,17 @@ export const updatePersonnel = async (
         syncTable('qua_trinh_dao_tao', training),
         syncTable('len_luong', salary)
     ]);
+};
+
+export const deletePersonnel = async (id: number) => {
+    const { error } = await supabase
+        .from('dsnv')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting personnel:', error);
+        throw error;
+    }
 };
 

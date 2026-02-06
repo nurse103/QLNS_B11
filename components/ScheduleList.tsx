@@ -17,9 +17,14 @@ export const ScheduleList: React.FC<ScheduleListProps> = ({ schedules, employees
     };
 
     const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleString('vi-VN', {
-            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-        });
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
     };
 
     if (schedules.length === 0) {

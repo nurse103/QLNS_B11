@@ -72,3 +72,12 @@ export interface LeaveRecord {
   created_at?: string;
 }
 
+export interface SystemUser {
+  id: string;
+  full_name: string;
+  username: string;
+  password?: string; // Optional for display, required for creation
+  role: 'user' | 'admin' | 'manager'; // Assuming roles based on user_role enum
+  created_at?: string;
+  updated_at?: string;
+}
