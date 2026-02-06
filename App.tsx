@@ -28,22 +28,26 @@ import {
   Monitor,
   BriefcaseMedical,
   Shirt,
+  Heart,
   User,
   Trash2,
   X,
   Save,
   Plus,
   Eye,
-  Edit
+  Edit,
+  Cake
 } from 'lucide-react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { MenuItem } from './types';
 import { Assistant } from './components/Assistant';
 import { ScheduleModule } from './components/ScheduleModule';
+import { SalaryModule } from './components/SalaryModule';
+import { FamilyModule } from './components/FamilyModule';
 import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
 import { User as AuthUser } from './services/authService';
-import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
+import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, getAllTraining, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
 import { LeaveModule } from './components/LeaveModule';
@@ -81,7 +85,21 @@ const dataPie = [
   { name: 'Thực tập', value: 20 },
 ];
 // Updated colors to match #009900 theme
-const COLORS = ['#009900', '#16a34a', '#4ade80', '#cbd5e1'];
+// Updated colors for more variety
+const COLORS = [
+  '#009900', // Green
+  '#16a34a', // Light Green
+  '#dc2626', // Red
+  '#ea580c', // Orange
+  '#ca8a04', // Yellow
+  '#0284c7', // Light Blue
+  '#2563eb', // Blue
+  '#3d3aedff', // Violet
+  '#db2777', // Pink
+  '#475569', // Slate
+  '#0891b2', // Cyan
+  '#be123c', // Rose
+];
 
 // --- Components ---
 
@@ -173,8 +191,149 @@ const SidebarItem = ({
 
 // Pages
 const Dashboard = () => {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    partyMembers: 0,
+    onLeave: 0,
+    salaryDue: 0 // Placeholder
+  });
+  const [pieData, setPieData] = useState<any[]>([]);
+  const [birthdayData, setBirthdayData] = useState<Employee[]>([]);
+  const [certificateData, setCertificateData] = useState<any[]>([]);
+  const [genderData, setGenderData] = useState<any[]>([]);
+  const [educationData, setEducationData] = useState<any[]>([]);
+  const [jobTitleData, setJobTitleData] = useState<any[]>([]);
+
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [data, trainingData] = await Promise.all([
+          getPersonnel(),
+          getAllTraining()
+        ]);
+
+        // 1. Calculate Basic Stats
+        const total = data.length;
+        const partyMembers = data.filter(e => e.ngay_vao_dang || e.so_the_dang).length;
+        // Simple check for "Nghỉ" in status
+        const onLeave = data.filter(e => e.trang_thai && e.trang_thai.toLowerCase().includes('nghỉ')).length;
+
+        setStats({
+          total,
+          partyMembers,
+          onLeave,
+          salaryDue: 24 // Keep as static/placeholder for now as logic is complex
+        });
+
+        // 2. Calculate Pie Chart Data (Structure/Doi Tuong)
+        const structureCount: Record<string, number> = {};
+        data.forEach(e => {
+          const type = e.doi_tuong || 'Khác';
+          structureCount[type] = (structureCount[type] || 0) + 1;
+        });
+
+        const newPieData = Object.keys(structureCount).map(key => ({
+          name: key,
+          value: structureCount[key]
+        }));
+        setPieData(newPieData);
+
+        // 3. Calculate Gender Pie Chart Data
+        const genderCount = { Nam: 0, Nu: 0, Khac: 0 };
+        data.forEach(e => {
+          const g = e.gioi_tinh ? e.gioi_tinh.toLowerCase() : '';
+          if (g === 'nam') genderCount.Nam++;
+          else if (g === 'nữ' || g === 'nu') genderCount.Nu++;
+          else genderCount.Khac++;
+        });
+        setGenderData([
+          { name: 'Nam', value: genderCount.Nam },
+          { name: 'Nữ', value: genderCount.Nu },
+          ...(genderCount.Khac > 0 ? [{ name: 'Khác', value: genderCount.Khac }] : [])
+        ]);
+
+        // 4. Calculate Education Bar Chart Data
+        const activeIds = new Set(data.map(e => e.id));
+        const relevantTraining = trainingData.filter(t => t.dsnv_id && activeIds.has(t.dsnv_id) && t.trinh_do_dao_tao);
+
+        const eduCount: Record<string, number> = {};
+        relevantTraining.forEach(t => {
+          const level = t.trinh_do_dao_tao?.trim() || 'Chưa rõ';
+          eduCount[level] = (eduCount[level] || 0) + 1;
+        });
+
+        const sortedEdu = Object.entries(eduCount)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+
+        setEducationData(sortedEdu);
+
+        // 5. Calculate Job Title (Chuc Vu) Chart Data
+        const jobCount: Record<string, number> = {};
+        data.forEach(e => {
+          const job = e.chuc_vu?.trim() || 'Chưa có';
+          jobCount[job] = (jobCount[job] || 0) + 1;
+        });
+
+        const sortedJobs = Object.entries(jobCount)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+
+        setJobTitleData(sortedJobs);
+
+        setJobTitleData(sortedJobs);
+
+        // 6. Calculate Birthday List (Current Month)
+        const currentMonth = new Date().getMonth(); // 0-11
+        const birthdays = data.filter(e => {
+          if (!e.ngay_sinh) return false;
+          const d = new Date(e.ngay_sinh);
+          return d.getMonth() === currentMonth;
+        }).sort((a, b) => {
+          // Sort by day of month
+          const dA = new Date(a.ngay_sinh || '');
+          const dB = new Date(b.ngay_sinh || '');
+          return dA.getDate() - dB.getDate();
+        });
+        setBirthdayData(birthdays);
+
+        // 7. Calculate Professional Certificate Data (Chung Chi Hanh Nghe)
+        const certCount: Record<string, number> = {};
+        data.forEach(e => {
+          if (e.chung_chi_hanh_nghe) {
+            // Determine if it's a comma separated list or single value? 
+            // Assuming simple text for now based on requirement "Biểu đồ chứng chỉ hành nghề"
+            // Split by comma if needed, trimming whitespace
+            const certs = e.chung_chi_hanh_nghe.split(',').map(c => c.trim()).filter(c => c);
+            certs.forEach(c => {
+              certCount[c] = (certCount[c] || 0) + 1;
+            });
+          } else {
+            certCount['Chưa có'] = (certCount['Chưa có'] || 0) + 1;
+          }
+        });
+
+        const sortedCerts = Object.entries(certCount)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value);
+        setCertificateData(sortedCerts);
+
+        // Removed Fluctuation Chart Loop
+
+      } catch (error) {
+        console.error("Error fetching dashboard data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 animate-fade-in">
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Tổng quan nhân sự</h1>
@@ -188,57 +347,190 @@ const Dashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Tổng nhân sự" value="512" trend="+12%" trendUp={true} icon={Users} colorClass="bg-primary-500" />
-        <StatCard title="Đang nghỉ phép" value="18" trend="-5%" trendUp={false} icon={CalendarClock} colorClass="bg-orange-500" />
-        <StatCard title="Đến hạn nâng lương" value="24" icon={BadgeCheck} colorClass="bg-yellow-500" />
-        <StatCard title="Đảng viên" value="86" trend="+2%" trendUp={true} icon={UserCheck} colorClass="bg-red-500" />
+        <StatCard
+          title="Tổng nhân sự"
+          value={loading ? "..." : stats.total.toString()}
+          trend={stats.total > 0 ? "+1" : "0"} // Simplified trend
+          trendUp={true}
+          icon={Users}
+          colorClass="bg-primary-500"
+        />
+        <StatCard
+          title="Đang nghỉ phép"
+          value={loading ? "..." : stats.onLeave.toString()}
+          trend="0"
+          trendUp={false}
+          icon={CalendarClock}
+          colorClass="bg-orange-500"
+        />
+        <StatCard
+          title="Đến hạn nâng lương"
+          value={loading ? "..." : stats.salaryDue.toString()}
+          icon={BadgeCheck}
+          colorClass="bg-yellow-500"
+        />
+        <StatCard
+          title="Đảng viên"
+          value={loading ? "..." : stats.partyMembers.toString()}
+          trend={`${stats.total > 0 ? ((stats.partyMembers / stats.total) * 100).toFixed(1) : 0}%`}
+          trendUp={true}
+          icon={UserCheck}
+          colorClass="bg-red-500"
+        />
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800 mb-6">Biến động nhân sự (6 tháng gần đây)</h3>
-          <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dataBar} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  cursor={{ fill: '#f1f5f9' }}
-                />
-                <Legend />
-                <Bar dataKey="employees" name="Tổng NV" fill="#009900" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="hired" name="Tuyển mới" fill="#16a34a" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="left" name="Thôi việc" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
+        {/* Row 1: Object Structure, Gender, Job Title */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-semibold text-slate-800 mb-6">Cơ cấu lao động</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Đối tượng nhân viên</h3>
+
+
           <div className="h-80 w-full flex justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={dataPie}
+                  data={pieData.length > 0 ? pieData : dataPie}
                   innerRadius={60}
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
+                  label={({ name, percent, value }) => `${name}: ${value}`}
                 >
-                  {dataPie.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
+                  {(pieData.length > 0 ? pieData : dataPie).map((entry, index) => {
+                    let color = COLORS[index % COLORS.length];
+                    if (entry.name === 'Sĩ quan' || entry.name === 'Sỹ quan') {
+                      color = '#3d3aedff';
+                    }
+                    return <Cell key={`cell-${index}`} fill={color} />;
+                  })}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value, name) => [value, name]} />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
+
+        {/* Gender Pie Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Tỷ lệ giới tính</h3>
+          <div className="h-80 w-full flex justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={genderData}
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent, value }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                >
+                  <Cell fill="#3b82f6" /> {/* Male - Blue */}
+                  <Cell fill="#ec4899" /> {/* Female - Pink */}
+                  <Cell fill="#94a3b8" /> {/* Other - Slate */}
+                </Pie>
+                <Tooltip formatter={(value, name) => [value, name]} />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Job Title Chart Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê chức vụ</h3>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={jobTitleData} margin={{ top: 10, right: 30, left: 0, bottom: 50 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={-25} textAnchor="end" height={60} />
+                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f1f5f9' }}
+                />
+                <Bar dataKey="value" name="Số lượng" fill="#f59e0b" radius={[4, 4, 0, 0]} label={{ position: 'top' }} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+
+      {/* Row 2: Education, Certificates, Birthdays */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Education Chart Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê trình độ đào tạo</h3>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={educationData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={0} textAnchor="middle" height={30} />
+                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f1f5f9' }}
+                />
+                <Bar dataKey="value" name="Số lượng" fill="#8b5cf6" radius={[4, 4, 0, 0]} label={{ position: 'top' }} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Certificate Chart Section (NEW) */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê chứng chỉ hành nghề</h3>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={certificateData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={0} textAnchor="middle" height={30} />
+                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: '#f1f5f9' }}
+                />
+                <Bar dataKey="value" name="Số lượng" fill="#f43f5e" radius={[4, 4, 0, 0]} label={{ position: 'top' }} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Birthday List Section (NEW) */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-slate-800">Sinh nhật tháng {new Date().getMonth() + 1}</h3>
+            <span className="bg-pink-100 text-pink-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              {birthdayData.length} người
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            {birthdayData.length > 0 ? (
+              <div className="space-y-4">
+                {birthdayData.map((emp) => (
+                  <div key={emp.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 font-bold text-sm">
+                      {new Date(emp.ngay_sinh || '').getDate()}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800">{emp.ho_va_ten}</p>
+                      <p className="text-xs text-slate-500">{emp.chuc_vu || 'Chưa có chức vụ'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                <Cake className="w-8 h-8 mb-2 opacity-50" />
+                <p className="text-sm">Không có sinh nhật trong tháng này</p>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -250,6 +542,7 @@ const PersonnelList = () => {
   const [personnel, setPersonnel] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(''); // Added searchTerm state
 
   // View Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -276,6 +569,43 @@ const PersonnelList = () => {
   const [workHistoryList, setWorkHistoryList] = useState<WorkHistory[]>([]);
   const [trainingList, setTrainingList] = useState<Training[]>([]);
   const [salaryList, setSalaryList] = useState<Salary[]>([]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Filter Logic
+  const filteredPersonnel = personnel.filter(p => {
+    // 1. Text Search
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch =
+      (p.ho_va_ten?.toLowerCase().includes(searchLower) || '') ||
+      (p.so_the_dang?.includes(searchLower) || '') ||
+      (p.chuc_vu?.toLowerCase().includes(searchLower) || '');
+
+    // 2. Filter by Doi Tuong (Object) or Trang Thai (Status)
+    const matchFilter = filterType === 'all' ||
+      p.doi_tuong === filterType ||
+      p.trang_thai === filterType ||
+      (filterType === 'Sĩ quan' && p.doi_tuong === 'Sỹ quan'); // Handle spelling variation
+
+    return matchSearch && matchFilter;
+  });
+
+  // Calculate Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredPersonnel.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredPersonnel.length / itemsPerPage);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Reset to first page
+  };
 
   // Temp State for adding new items to lists
   const [tempFamily, setTempFamily] = useState<Partial<Family>>({});
@@ -506,13 +836,16 @@ const PersonnelList = () => {
         ngay_chinh_thuc: processDate(row[18]),
         so_the_dang: row[19] ? String(row[19]) : null,
         ngay_cap_the_dang: processDate(row[20]),
+        chung_chi_hanh_nghe: row[21] || null, // Added chung_chi_hanh_nghe
         // Default null for others
         thang_nam_roi_khoa: null,
         trang_thai_roi_khoa: null,
         noi_den: null,
         avatar: null,
         ghi_chu: null,
-        doi_tuong: null
+        doi_tuong: null,
+        danh_hieu: null,
+        don_vi_id: null
       })).filter(e => e.ho_va_ten); // Ensure name exists
 
       if (newEmployees.length > 0) {
@@ -536,10 +869,7 @@ const PersonnelList = () => {
 
 
 
-  const filteredPersonnel = (personnel || []).filter(emp => {
-    if (filterType === 'all') return true;
-    return emp.doi_tuong === filterType;
-  });
+
 
   return (
     <div className="p-6">
@@ -548,7 +878,16 @@ const PersonnelList = () => {
         <div className="p-4 border-b border-slate-100 flex gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-            <input type="text" placeholder="Tìm kiếm theo tên..." className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên..."
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to page 1 on search
+              }}
+            />
           </div>
           <div className="flex gap-2 ml-auto">
             {/* Import Buttons */}
@@ -637,81 +976,129 @@ const PersonnelList = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredPersonnel.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
-                      Chưa có dữ liệu phù hợp.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPersonnel.map((emp) => (
-                    <tr key={emp.id} className={`hover:bg-slate-50 ${selectedIds.has(emp.id) ? 'bg-blue-50' : ''}`}>
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(emp.id)}
-                          onChange={() => toggleSelection(emp.id)}
-                          className="rounded border-slate-300 transform scale-125 accent-green-600"
-                        />
-                      </td>
-                      <td className="px-6 py-3 font-medium text-slate-900">#{emp.id}</td>
-                      <td className="px-6 py-3 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                          {emp.ho_va_ten ? emp.ho_va_ten.charAt(0).toUpperCase() : 'NV'}
+                {currentItems.length > 0 ? (
+                  currentItems.map((employee, index) => (
+                    <tr key={employee.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                            checked={selectedIds.has(employee.id)}
+                            onChange={() => toggleSelection(employee.id)}
+                          />
+                          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs">
+                            {employee.ho_va_ten?.charAt(0)}
+                          </div>
                         </div>
-                        <span>{emp.ho_va_ten}</span>
                       </td>
-                      <td className="px-6 py-3">{emp.cap_bac}</td>
-                      <td className="px-6 py-3">{emp.chuc_vu}</td>
-                      <td className="px-6 py-3 text-slate-600">{emp.doi_tuong}</td>
-                      <td className="px-6 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${emp.trang_thai === 'Đang làm việc' ? 'bg-green-100 text-green-700' :
-                          emp.trang_thai?.includes('Nghỉ') ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">{employee.ho_va_ten}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.ngay_sinh ? new Date(employee.ngay_sinh).toLocaleDateString('vi-VN') : '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.cap_bac}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.chuc_vu}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.so_the_dang}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-100 text-green-800' :
+                          employee.trang_thai === 'Đã nghỉ hưu' ? 'bg-slate-100 text-slate-800' :
+                            'bg-red-100 text-red-800'
                           }`}>
-                          {emp.trang_thai || 'N/A'}
+                          {employee.trang_thai || 'Chưa cập nhật'}
                         </span>
                       </td>
-                      <td className="px-6 py-3">{emp.ngay_ve_khoa_cong_tac}</td>
-                      <td className="px-6 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleView(emp)}
-                            className="text-slate-600 hover:text-primary-600 font-medium flex items-center gap-1 px-2 py-1 hover:bg-slate-100 rounded"
-                            title="Xem chi tiết"
-                          >
-                            <Eye size={16} /> Xem
-                          </button>
-                          <button
-                            onClick={() => handleEdit(emp)}
-                            className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 px-2 py-1 hover:bg-blue-50 rounded"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit size={16} /> Sửa
-                          </button>
-                          <button
-                            onClick={() => handleDelete(emp.id)}
-                            className="text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2 py-1 hover:bg-red-50 rounded"
-                            title="Xóa"
-                          >
-                            <Trash2 size={16} /> Xóa
-                          </button>
-                        </div>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => handleView(employee)}
+                          className="text-primary-600 hover:text-primary-900 mr-2"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="text-primary-600 hover:text-primary-900 mr-2" title="Chỉnh sửa">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(employee.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Xóa nhân viên"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                      Không tìm thấy nhân sự phù hợp
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
         )}
 
-        <div className="p-4 border-t border-slate-100 flex justify-between items-center text-sm text-slate-500">
-          <span>{personnel.length > 0 ? `Hiển thị ${personnel.length} nhân viên` : 'Không có dữ liệu'}</span>
+        <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center text-sm text-slate-600 gap-4">
+          <div className="flex items-center gap-4">
+            <span>
+              Hiển thị {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}-{Math.min(indexOfLastItem, filteredPersonnel.length)} của {filteredPersonnel.length} nhân viên
+            </span>
+            <select
+              value={itemsPerPage}
+              onChange={handleItemsPerPageChange}
+              className="border border-slate-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value={5}>5 dòng</option>
+              <option value={10}>10 dòng</option>
+              <option value={15}>15 dòng</option>
+              <option value={20}>20 dòng</option>
+              <option value={50}>50 dòng</option>
+              <option value={100}>100 dòng</option>
+            </select>
+          </div>
+
           <div className="flex gap-1">
-            <button className="px-3 py-1 border rounded hover:bg-slate-50 disabled:opacity-50">Trước</button>
-            <button className="px-3 py-1 bg-primary-600 text-white rounded">1</button>
-            <button className="px-3 py-1 border rounded hover:bg-slate-50">2</button>
-            <button className="px-3 py-1 border rounded hover:bg-slate-50">Sau</button>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Trước
+            </button>
+
+            {/* Simple Page Numbers */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              // Show a window of pages around current? Or just 1..5?
+              // Simple implementation: Show 5 pages around current
+              let p = currentPage - 2 + i;
+              if (currentPage < 3) p = 1 + i;
+              if (currentPage > totalPages - 2) p = totalPages - 4 + i;
+              if (p < 1) p = 1; // Correction
+              if (p > totalPages) return null; // Don't render
+
+              // If massive pages, this logic needs refinement, but good for now.
+              // Let's just do a simple list if pages < 7, else simple Prev Next with current index.
+              return (
+                <button
+                  key={p}
+                  onClick={() => handlePageChange(p)}
+                  className={`px-3 py-1 rounded border ${currentPage === p
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1 border rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Sau
+            </button>
           </div>
         </div>
       </div >
@@ -912,7 +1299,7 @@ const PersonnelList = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Năm sinh</label>
-                        <input type="number" value={tempFamily.nam_sinh || ''} onChange={e => setTempFamily({ ...tempFamily, nam_sinh: parseInt(e.target.value) })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                        <input type="number" value={tempFamily.nam_sinh || ''} onChange={e => setTempFamily({ ...tempFamily, nam_sinh: e.target.value ? parseInt(e.target.value) : undefined })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700">Nghề nghiệp</label>
@@ -1245,10 +1632,10 @@ function App() {
         { id: 'p-dashboard', label: 'Dashboard Nhân sự', path: '/personnel/dashboard', icon: Activity },
         { id: 'p-list', label: 'Danh sách nhân viên', path: '/personnel/list', icon: FileText },
         { id: 'p-salary', label: 'Lên lương', path: '/personnel/salary', icon: Users },
+        { id: 'p-family', label: 'Quan hệ gia đình', path: '/personnel/family', icon: Heart },
         { id: 'p-training', label: 'Quá trình đào tạo', path: '/personnel/training', icon: GraduationCap },
         { id: 'p-work', label: 'Quá trình công tác', path: '/personnel/history', icon: History },
         { id: 'p-cert', label: 'Chứng chỉ hành nghề', path: '/personnel/certs', icon: BadgeCheck },
-        { id: 'p-family', label: 'Gia đình', path: '/personnel/family', icon: Baby },
         { id: 'p-insurance', label: 'Bảo hiểm y tế', path: '/personnel/insurance', icon: HeartPulse },
       ]
     },
@@ -1397,6 +1784,8 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/personnel/dashboard" element={<Dashboard />} />
               <Route path="/personnel/list" element={<PersonnelList />} />
+              <Route path="/personnel/salary" element={<SalaryModule />} />
+              <Route path="/personnel/family" element={<FamilyModule />} />
 
               {/* Placeholders for other routes based on requirements */}
               <Route path="/personnel" element={<PlaceholderPage title="Module Nhân sự" />} />
@@ -1405,8 +1794,8 @@ function App() {
               <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
               <Route path="/rewards" element={<PlaceholderPage title="Khen thưởng & Kỷ luật" />} />
               <Route path="/combat" element={<PlaceholderPage title="Sẵn sàng chiến đấu" />} />
-              <Route path="/duty" element={<PlaceholderPage title="Lịch trực" />} />
-              <Route path="/schedule" element={<ScheduleModule />} />
+              <Route path="/duty" element={<ScheduleModule />} />
+              <Route path="/schedule" element={<PlaceholderPage title="Lịch công tác" />} />
               <Route path="/assets" element={<PlaceholderPage title="Quản lý tài sản" />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>

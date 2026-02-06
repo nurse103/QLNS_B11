@@ -30,6 +30,9 @@ export interface Employee {
 
     ngay_cap_the_dang: string | null;
     doi_tuong: string | null;
+    danh_hieu: string | null;
+    don_vi_id: number | null;
+    chung_chi_hanh_nghe: string | null;
     created_at?: string;
 }
 
@@ -119,6 +122,18 @@ export const getPersonnel = async () => {
     return data as Employee[];
 };
 
+export const getAllTraining = async () => {
+    const { data, error } = await supabase
+        .from('qua_trinh_dao_tao')
+        .select('*');
+
+    if (error) {
+        console.error('Error fetching all training:', error);
+        throw error;
+    }
+    return data as Training[];
+};
+
 export const bulkCreatePersonnel = async (employees: Omit<Employee, 'id' | 'created_at'>[]) => {
     const { data, error } = await supabase
         .from('dsnv')
@@ -159,7 +174,11 @@ export const createPersonnel = async (
         if (items.length === 0) return;
         const records = items.map(item => ({ ...item, dsnv_id: employeeId }));
         const { error } = await supabase.from(table).insert(records);
-        if (error) console.error(`Error inserting into ${table}:`, error);
+        if (error) {
+            console.error(`Error inserting into ${table}:`, error);
+            // If it's the family table, alert or throw to make it visible
+            if (table === 'gia_dinh') console.error("FAMILY_INSERT_ERROR", error);
+        }
     };
 
     await Promise.all([
@@ -222,7 +241,8 @@ export const updatePersonnel = async (
 
     const syncTable = async (table: string, items: any[]) => {
         // Delete all for this employee
-        await supabase.from(table).delete().eq('dsnv_id', id);
+        const { error: delError } = await supabase.from(table).delete().eq('dsnv_id', id);
+        if (delError) console.error(`Error deleting from ${table}:`, delError);
 
         // Insert all fresh
         if (items.length > 0) {
@@ -230,7 +250,8 @@ export const updatePersonnel = async (
                 const { id: _, ...rest } = item; // Remove ID to let DB generate new ones, or keep if we want (but simpler to regenerate)
                 return { ...rest, dsnv_id: id };
             });
-            await supabase.from(table).insert(records);
+            const { error: insError } = await supabase.from(table).insert(records);
+            if (insError) console.error(`Error inserting into ${table}:`, insError);
         }
     };
 

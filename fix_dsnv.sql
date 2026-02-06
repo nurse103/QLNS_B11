@@ -4,6 +4,7 @@
 -- 1. Ensure columns exist and are TEXT type (to avoid Enum mismatches)
 ALTER TABLE dsnv ADD COLUMN IF NOT EXISTS trang_thai TEXT;
 ALTER TABLE dsnv ADD COLUMN IF NOT EXISTS doi_tuong TEXT;
+ALTER TABLE dsnv ADD COLUMN IF NOT EXISTS chung_chi_hanh_nghe TEXT;
 
 -- 2. Ensure RLS is enabled
 ALTER TABLE dsnv ENABLE ROW LEVEL SECURITY;
