@@ -44,10 +44,22 @@ import { Assistant } from './components/Assistant';
 import { ScheduleModule } from './components/ScheduleModule';
 import { SalaryModule } from './components/SalaryModule';
 import { FamilyModule } from './components/FamilyModule';
+import { PartyModule } from './components/PartyModule';
+import { WorkHistoryModule } from './components/WorkHistoryModule';
+import { TrainingHistoryModule } from './components/TrainingHistoryModule';
 import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
 import { User as AuthUser } from './services/authService';
-import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, getAllTraining, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
+
+// Date formatting helper
+const formatDateVN = (dateStr: string | undefined | null) => {
+  if (!dateStr) return '';
+  const [year, month, day] = dateStr.split('-');
+  if (!year || !month || !day) return dateStr;
+  return `${day}/${month}/${year}`;
+};
+
+import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, getAllTraining, uploadPartyCardImage, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
 import { LeaveModule } from './components/LeaveModule';
@@ -845,7 +857,9 @@ const PersonnelList = () => {
         ghi_chu: null,
         doi_tuong: null,
         danh_hieu: null,
-        don_vi_id: null
+        don_vi_id: null,
+        noi_cap_the_dang: null,
+        anh_the_dang: null
       })).filter(e => e.ho_va_ten); // Ensure name exists
 
       if (newEmployees.length > 0) {
@@ -965,10 +979,8 @@ const PersonnelList = () => {
                       className="rounded border-slate-300 transform scale-125 accent-green-600"
                     />
                   </th>
-                  <th className="px-6 py-3">ID</th>
-                  <th className="px-6 py-3">Họ và Tên</th>
-                  <th className="px-6 py-3">Cấp bậc</th>
-                  <th className="px-6 py-3">Chức vụ</th>
+                  <th className="px-6 py-3">Họ và tên / Cấp bậc / Chức vụ</th>
+                  <th className="px-6 py-3">Ngày sinh / Giới tính</th>
                   <th className="px-6 py-3">Đối tượng</th>
                   <th className="px-6 py-3">Trạng thái</th>
                   <th className="px-6 py-3">Ngày về khoa</th>
@@ -992,11 +1004,19 @@ const PersonnelList = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">{employee.ho_va_ten}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.ngay_sinh ? new Date(employee.ngay_sinh).toLocaleDateString('vi-VN') : '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.cap_bac}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.chuc_vu}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.so_the_dang}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-slate-800">{employee.ho_va_ten}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {employee.cap_bac} {employee.cap_bac && employee.chuc_vu ? '-' : ''} {employee.chuc_vu}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-slate-700">
+                          {employee.ngay_sinh ? new Date(employee.ngay_sinh).toLocaleDateString('vi-VN') : '-'}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">{employee.gioi_tinh || '-'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.doi_tuong || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-100 text-green-800' :
                           employee.trang_thai === 'Đã nghỉ hưu' ? 'bg-slate-100 text-slate-800' :
@@ -1005,30 +1025,42 @@ const PersonnelList = () => {
                           {employee.trang_thai || 'Chưa cập nhật'}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {employee.ngay_ve_khoa_cong_tac ? new Date(employee.ngay_ve_khoa_cong_tac).toLocaleDateString('vi-VN') : '-'}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleView(employee)}
-                          className="text-primary-600 hover:text-primary-900 mr-2"
-                          title="Xem chi tiết"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="text-primary-600 hover:text-primary-900 mr-2" title="Chỉnh sửa">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(employee.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Xóa nhân viên"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => handleView(employee)}
+                            className="flex items-center gap-1 px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={14} />
+                            <span>Xem</span>
+                          </button>
+                          <button
+                            onClick={() => handleEdit(employee)}
+                            className="flex items-center gap-1 px-2 py-1 text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit size={14} />
+                            <span>Sửa</span>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(employee.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Xóa nhân viên"
+                          >
+                            <Trash2 size={14} />
+                            <span>Xóa</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                       Không tìm thấy nhân sự phù hợp
                     </td>
                   </tr>
@@ -1259,6 +1291,40 @@ const PersonnelList = () => {
                           <label className="text-sm font-medium text-slate-700">Ngày cấp thẻ Đảng</label>
                           <input type="date" name="ngay_cap_the_dang" value={formData.ngay_cap_the_dang || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                         </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-700">Nơi cấp thẻ Đảng</label>
+                          <input type="text" name="noi_cap_the_dang" value={formData.noi_cap_the_dang || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        </div>
+                        <div className="space-y-2 col-span-2">
+                          <label className="text-sm font-medium text-slate-700">Ảnh thẻ Đảng</label>
+                          <div className="flex items-center gap-4">
+                            {formData.anh_the_dang && (
+                              <img src={formData.anh_the_dang} alt="Thẻ đảng" className="h-20 w-32 object-cover rounded border border-slate-200" />
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  try {
+                                    const url = await uploadPartyCardImage(file);
+                                    setFormData(prev => ({ ...prev, anh_the_dang: url }));
+                                  } catch (err) {
+                                    console.error(err);
+                                    alert("Lỗi tải ảnh lên");
+                                  }
+                                }
+                              }}
+                              className="block w-full text-sm text-slate-500
+                                  file:mr-4 file:py-2 file:px-4
+                                  file:rounded-full file:border-0
+                                  file:text-sm file:font-semibold
+                                  file:bg-violet-50 file:text-violet-700
+                                  hover:file:bg-violet-100"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1335,7 +1401,7 @@ const PersonnelList = () => {
                           {workHistoryList.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center bg-white p-3 rounded border border-slate-100 shadow-sm">
                               <div>
-                                <p className="text-sm font-medium text-slate-800">{item.tu_thang_nam} - {item.den_thang_nam}: {item.don_vi_cong_tac}</p>
+                                <p className="text-sm font-medium text-slate-800">{formatDateVN(item.tu_thang_nam)} - {formatDateVN(item.den_thang_nam)}: {item.don_vi_cong_tac}</p>
                                 <p className="text-xs text-slate-500">{item.chuc_vu} - {item.cap_bac}</p>
                               </div>
                               <button type="button" onClick={() => removeItem(idx, setWorkHistoryList)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
@@ -1394,7 +1460,7 @@ const PersonnelList = () => {
                           {trainingList.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center bg-white p-3 rounded border border-slate-100 shadow-sm">
                               <div>
-                                <p className="text-sm font-medium text-slate-800">{item.tu_thang_nam} - {item.den_thang_nam}: {item.ten_co_so_dao_tao}</p>
+                                <p className="text-sm font-medium text-slate-800">{formatDateVN(item.tu_thang_nam)} - {formatDateVN(item.den_thang_nam)}: {item.ten_co_so_dao_tao}</p>
                                 <p className="text-xs text-slate-500">{item.nganh_dao_tao} - {item.trinh_do_dao_tao}</p>
                               </div>
                               <button type="button" onClick={() => removeItem(idx, setTrainingList)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
@@ -1453,7 +1519,7 @@ const PersonnelList = () => {
                           {salaryList.map((item, idx) => (
                             <div key={idx} className="flex justify-between items-center bg-white p-3 rounded border border-slate-100 shadow-sm">
                               <div>
-                                <p className="text-sm font-medium text-slate-800">{item.thang_nam_nhan}: {item.quan_ham} - {item.loai_nhom}</p>
+                                <p className="text-sm font-medium text-slate-800">{formatDateVN(item.thang_nam_nhan)}: {item.quan_ham} - {item.loai_nhom}</p>
                                 <p className="text-xs text-slate-500">Hệ số: {item.he_so} - Bậc: {item.bac}</p>
                               </div>
                               <button type="button" onClick={() => removeItem(idx, setSalaryList)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
@@ -1509,15 +1575,13 @@ const PersonnelList = () => {
               </form>
             </div>
           </div>
-        )
-      }
-      {/* Bulk Update Modal */}
+        )}
+
       {isBulkUpdateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md animate-scale-in">
             <h3 className="text-xl font-bold text-slate-800 mb-4">Cập nhật trạng thái hàng loạt</h3>
             <p className="text-slate-600 mb-6">Bạn đang chọn update cho <strong>{selectedIds.size}</strong> nhân viên.</p>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Chọn trạng thái mới (để trống nếu không đổi)</label>
@@ -1573,7 +1637,8 @@ const PersonnelList = () => {
             </div>
           </div>
         </div>
-      )}
+      )
+      }
     </div >
   );
 }
@@ -1591,7 +1656,7 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 
 // Main App Layout & Logic
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
 
@@ -1639,7 +1704,7 @@ function App() {
         { id: 'p-insurance', label: 'Bảo hiểm y tế', path: '/personnel/insurance', icon: HeartPulse },
       ]
     },
-    { id: 'party', label: 'Đảng viên', icon: UserCheck, path: '/party' },
+
     { id: 'leave', label: 'Quản lý phép/Tranh thủ', icon: CalendarClock, path: '/leave' },
     {
       id: 'research',
@@ -1652,7 +1717,10 @@ function App() {
         { id: 'r-conference', label: 'Tham dự báo cáo', path: '/research/conference', icon: Users },
       ]
     },
-    { id: 'rewards', label: 'Khen thưởng, kỷ luật', icon: Award, path: '/rewards' },
+    { id: 'rewards', label: 'Khen thưởng - Kỷ luật', icon: Award, path: '/rewards' },
+
+    { id: 'party-management', label: 'Quản lý đảng viên', icon: UserCheck, path: '/dang-vien' },
+    { id: 'reports', label: 'Báo cáo thống kê', icon: FileText, path: '/reports' },
     { id: 'combat', label: 'Sẵn sàng chiến đấu', icon: ShieldAlert, path: '/combat' },
     { id: 'duty', label: 'Lịch trực', icon: CalendarClock, path: '/duty' },
     { id: 'schedule', label: 'Lịch công tác', icon: CalendarDays, path: '/schedule' },
@@ -1676,7 +1744,7 @@ function App() {
         {/* Sidebar */}
         <aside
           className={`
-                ${sidebarOpen ? 'w-72' : 'w-0 lg:w-20'} 
+                ${sidebarOpen ? 'w-72' : 'w-0 lg:w-20'}
                 bg-slate-900 text-slate-300 transition-all duration-300 flex flex-col z-20 shadow-xl
             `}
         >
@@ -1786,10 +1854,12 @@ function App() {
               <Route path="/personnel/list" element={<PersonnelList />} />
               <Route path="/personnel/salary" element={<SalaryModule />} />
               <Route path="/personnel/family" element={<FamilyModule />} />
+              <Route path="/personnel/history" element={<WorkHistoryModule />} />
+              <Route path="/personnel/training" element={<TrainingHistoryModule />} />
 
               {/* Placeholders for other routes based on requirements */}
               <Route path="/personnel" element={<PlaceholderPage title="Module Nhân sự" />} />
-              <Route path="/party" element={<PlaceholderPage title="Quản lý Đảng viên" />} />
+              <Route path="/dang-vien" element={<PartyModule />} />
               <Route path="/leave" element={<LeaveModule />} />
               <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
               <Route path="/rewards" element={<PlaceholderPage title="Khen thưởng & Kỷ luật" />} />

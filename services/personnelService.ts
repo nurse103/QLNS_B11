@@ -29,6 +29,8 @@ export interface Employee {
     so_the_dang: string | null;
 
     ngay_cap_the_dang: string | null;
+    noi_cap_the_dang: string | null;
+    anh_the_dang: string | null;
     doi_tuong: string | null;
     danh_hieu: string | null;
     don_vi_id: number | null;
@@ -37,6 +39,15 @@ export interface Employee {
 }
 
 // ... existing interfaces ...
+
+
+// Date formatting helper
+const formatDateVN = (dateStr: string | undefined | null) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    if (!year || !month || !day) return dateStr;
+    return `${day}/${month}/${year}`;
+};
 
 export const bulkUpdatePersonnel = async (ids: number[], updates: Partial<Employee>) => {
     const { error } = await supabase
@@ -87,10 +98,29 @@ export interface Training {
     nganh_dao_tao?: string;
     trinh_do_dao_tao?: string;
     hinh_thuc_dao_tao?: string;
+    van_bang_chung_chi?: string;
     xep_loai_tot_nghiep?: string;
-    anh_van_bang?: string;
     ghi_chu?: string;
 }
+
+export const getAllWorkHistory = async () => {
+    const { data, error } = await supabase
+        .from('qua_trinh_cong_tac')
+        .select(`
+            *,
+            dsnv:dsnv_id (
+                ho_va_ten,
+                cmqd
+            )
+        `)
+        .order('tu_thang_nam', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching all work history:', error);
+        throw error;
+    }
+    return data;
+};
 
 export interface Salary {
     id?: number;
@@ -125,7 +155,14 @@ export const getPersonnel = async () => {
 export const getAllTraining = async () => {
     const { data, error } = await supabase
         .from('qua_trinh_dao_tao')
-        .select('*');
+        .select(`
+            *,
+            dsnv:dsnv_id (
+                ho_va_ten,
+                cmqd
+            )
+        `)
+        .order('tu_thang_nam', { ascending: false });
 
     if (error) {
         console.error('Error fetching all training:', error);
@@ -273,5 +310,22 @@ export const deletePersonnel = async (id: number) => {
         console.error('Error deleting personnel:', error);
         throw error;
     }
+};
+
+export const uploadPartyCardImage = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('the_dang')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        throw uploadError;
+    }
+
+    const { data } = supabase.storage.from('the_dang').getPublicUrl(filePath);
+    return data.publicUrl;
 };
 

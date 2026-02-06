@@ -23,7 +23,9 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
 
     const formatDate = (dateStr: string | null | undefined) => {
         if (!dateStr) return '---';
-        return new Date(dateStr).toLocaleDateString('vi-VN');
+        const [year, month, day] = dateStr.split('-');
+        if (!year || !month || !day) return dateStr;
+        return `${day}/${month}/${year}`;
     };
 
     const InfoRow = ({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon?: any }) => (
@@ -82,8 +84,8 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600 bg-blue-50/30'
-                                    : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                                ? 'border-blue-600 text-blue-600 bg-blue-50/30'
+                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                 }`}
                         >
                             <tab.icon size={18} />
