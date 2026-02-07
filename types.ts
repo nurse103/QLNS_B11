@@ -81,3 +81,44 @@ export interface SystemUser {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface AbsenceRecord {
+  id: number;
+  dsnv_id: number | null;
+  ho_va_ten: string;
+  loai_nghi: string;
+  ngay_nghi: string;
+  ghi_chu: string | null;
+  created_at?: string;
+}
+
+export interface Card {
+  id: number;
+  so_the: string;
+  trang_thai: string;
+  ghi_chu: string | null;
+  created_at?: string;
+}
+
+export interface CardRecord {
+  id: number;
+  ngay_muon: string;
+  ho_ten_benh_nhan: string;
+  nam_sinh: string | number | null;
+  ho_ten_nguoi_cham: string;
+  sdt_nguoi_cham: string | null;
+  so_the: string;
+  so_tien_cuoc: number;
+  ghi_chu: string | null;
+  nguoi_cho_muon: string | null;
+  trang_thai: string;
+  nguoi_nhan_lai_the: string | null;
+  ngay_tra: string | null;
+  nguoi_ban_giao_tien_muon: string | null;
+  ngay_ban_giao_tien_muon: string | null;
+  trang_thai_tien_muon: string | null;
+  nguoi_ban_giao_tien_tra: string | null;
+  ngay_ban_giao_tien_tra: string | null;
+  trang_thai_tien_tra: string | null;
+  created_at?: string;
+}

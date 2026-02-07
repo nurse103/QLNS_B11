@@ -88,3 +88,15 @@ export const updateBackground = async (file: File): Promise<string | null> => {
         return null;
     }
 };
+
+export const getAuthUser = (): User | null => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+        try {
+            return JSON.parse(userStr);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+};

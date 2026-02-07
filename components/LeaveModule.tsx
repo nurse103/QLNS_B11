@@ -10,7 +10,6 @@ export const LeaveModule = () => {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<LeaveRecord | null>(null);
@@ -55,7 +54,7 @@ export const LeaveModule = () => {
         } else {
             setEditingRecord(null);
             setFormData({
-                loai_nghi: 'Phép thường niên',
+                loai_nghi: 'Phép',
                 tu_ngay: new Date().toISOString().split('T')[0],
                 den_ngay: new Date().toISOString().split('T')[0]
             });
@@ -125,7 +124,7 @@ export const LeaveModule = () => {
 
     return (
         <div className="p-6 space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex-wrap gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800">Quản lý Phép / Tranh thủ</h1>
                     <p className="text-slate-500 text-sm mt-1">Theo dõi lịch nghỉ phép và tranh thủ của quân nhân</p>
@@ -370,10 +369,11 @@ export const LeaveModule = () => {
                                     <label className="text-sm font-medium text-slate-700">Loại nghỉ</label>
                                     <select
                                         className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={formData.loai_nghi || 'Phép thường niên'}
+                                        value={formData.loai_nghi || 'Phép'}
                                         onChange={e => setFormData({ ...formData, loai_nghi: e.target.value })}
                                     >
-                                        <option value="Phép thường niên">Phép thường niên</option>
+                                        <option value="Phép">Phép</option>
+                                        <option value="Nghỉ trực">Nghỉ trực</option>
                                         <option value="Tranh thủ">Tranh thủ</option>
                                         <option value="Nghỉ ốm">Nghỉ ốm</option>
                                         <option value="Nghỉ cưới">Nghỉ cưới</option>

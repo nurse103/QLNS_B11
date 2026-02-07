@@ -36,7 +36,8 @@ import {
   Plus,
   Eye,
   Edit,
-  Cake
+  Cake,
+  CreditCard
 } from 'lucide-react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { MenuItem } from './types';
@@ -63,6 +64,10 @@ import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bu
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
 import { LeaveModule } from './components/LeaveModule';
+import { OverviewModule } from './components/OverviewModule';
+import { WorkScheduleModule } from './components/WorkScheduleModule';
+import { AbsenceModule } from './components/AbsenceModule';
+import { PatientCardModule } from './components/PatientCardModule';
 
 // Charts
 import {
@@ -1720,6 +1725,13 @@ function App() {
     { id: 'rewards', label: 'Khen thưởng - Kỷ luật', icon: Award, path: '/rewards' },
 
     { id: 'party-management', label: 'Quản lý đảng viên', icon: UserCheck, path: '/dang-vien' },
+    { id: 'patient-card-management', label: 'Quản lý thẻ chăm', icon: CreditCard, path: '/patient-cards' },
+    {
+      id: 'absence',
+      label: 'Quản lý Quân số nghỉ',
+      path: '/quan-so-nghi',
+      icon: UserCheck
+    },
     { id: 'reports', label: 'Báo cáo thống kê', icon: FileText, path: '/reports' },
     { id: 'combat', label: 'Sẵn sàng chiến đấu', icon: ShieldAlert, path: '/combat' },
     { id: 'duty', label: 'Lịch trực', icon: CalendarClock, path: '/duty' },
@@ -1814,7 +1826,10 @@ function App() {
                   </div>
                   <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-slate-700">{user?.full_name || user?.username || 'Admin'}</p>
-                    <p className="text-xs text-slate-500">{user?.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</p>
+                    <p className="text-xs text-slate-500">
+                      {user?.role === 'admin' ? 'Quản trị viên' :
+                        user?.role === 'manager' ? 'Quản lý' : 'Nhân viên'}
+                    </p>
                   </div>
                   <ChevronDown size={16} className={`text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -1823,8 +1838,11 @@ function App() {
                 {userMenuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in-up origin-top-right">
                     <div className="px-4 py-3 border-b border-slate-100 md:hidden">
-                      <p className="text-sm font-medium text-slate-900">Admin User</p>
-                      <p className="text-xs text-slate-500">Quản trị viên</p>
+                      <p className="text-sm font-medium text-slate-900">{user?.full_name || user?.username}</p>
+                      <p className="text-xs text-slate-500">
+                        {user?.role === 'admin' ? 'Quản trị viên' :
+                          user?.role === 'manager' ? 'Quản lý' : 'Nhân viên'}
+                      </p>
                     </div>
                     <div className="py-1">
                       <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
@@ -1849,7 +1867,7 @@ function App() {
           {/* Scrollable Content Area */}
           <main className="flex-1 overflow-y-auto bg-slate-50 scrollbar-hide">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<OverviewModule />} />
               <Route path="/personnel/dashboard" element={<Dashboard />} />
               <Route path="/personnel/list" element={<PersonnelList />} />
               <Route path="/personnel/salary" element={<SalaryModule />} />
@@ -1861,11 +1879,13 @@ function App() {
               <Route path="/personnel" element={<PlaceholderPage title="Module Nhân sự" />} />
               <Route path="/dang-vien" element={<PartyModule />} />
               <Route path="/leave" element={<LeaveModule />} />
+              <Route path="/quan-so-nghi" element={<AbsenceModule />} />
+              <Route path="/patient-cards" element={<PatientCardModule />} />
               <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
               <Route path="/rewards" element={<PlaceholderPage title="Khen thưởng & Kỷ luật" />} />
               <Route path="/combat" element={<PlaceholderPage title="Sẵn sàng chiến đấu" />} />
               <Route path="/duty" element={<ScheduleModule />} />
-              <Route path="/schedule" element={<PlaceholderPage title="Lịch công tác" />} />
+              <Route path="/schedule" element={<WorkScheduleModule />} />
               <Route path="/assets" element={<PlaceholderPage title="Quản lý tài sản" />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>

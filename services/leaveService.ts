@@ -57,3 +57,19 @@ export const deleteLeaveRecord = async (id: number) => {
         throw error;
     }
 };
+
+export const getLeavesOnDate = async (date: string) => {
+    // Fetch records where tu_ngay <= date <= den_ngay
+    const { data, error } = await supabase
+        .from('quan_ly_phep')
+        .select('*')
+        .lte('tu_ngay', date)
+        .gte('den_ngay', date);
+
+    if (error) {
+        console.error('Error fetching leaves on date:', error);
+        throw error;
+    }
+
+    return data as LeaveRecord[];
+};

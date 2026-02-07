@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { getBackground, updateBackground } from '../services/authService';
 import { Upload, Image as ImageIcon, Save, CheckCircle, AlertCircle, Users, Layout } from 'lucide-react';
 import { UserManagement } from './UserManagement';
+import { CardManagement } from './CardManagement';
+import { CreditCard } from 'lucide-react';
 
 export const Settings = () => {
-    const [activeTab, setActiveTab] = useState<'general' | 'users'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'users' | 'cards'>('general');
     const [background, setBackground] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [preview, setPreview] = useState('');
@@ -75,6 +77,13 @@ export const Settings = () => {
                             >
                                 <Users size={18} />
                                 Quản lý người dùng
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('cards')}
+                                className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'cards' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                            >
+                                <CreditCard size={18} />
+                                Quản lý danh sách thẻ
                             </button>
                         </nav>
                     </div>
@@ -148,13 +157,17 @@ export const Settings = () => {
                                 </div>
                             </div>
                         </div>
-                    ) : (
+                    ) : activeTab === 'users' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
                             <UserManagement />
                         </div>
-                    )}
+                    ) : activeTab === 'cards' ? (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
+                            <CardManagement />
+                        </div>
+                    ) : null}
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
