@@ -1883,6 +1883,7 @@ function App() {
                 />
               ))}
 
+            </nav>
           </div>
         </aside>
 
