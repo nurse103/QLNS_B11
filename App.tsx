@@ -50,7 +50,8 @@ import { WorkHistoryModule } from './components/WorkHistoryModule';
 import { TrainingHistoryModule } from './components/TrainingHistoryModule';
 import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
-import { User as AuthUser } from './services/authService';
+import { User as AuthUser, getCurrentUser } from './services/authService';
+import { getPermissionsByRole, Permission } from './services/permissionService';
 
 // Date formatting helper
 const formatDateVN = (dateStr: string | undefined | null) => {
@@ -1701,6 +1702,27 @@ function App() {
     }
   }, []);
 
+  // Permission State
+  const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        try {
+          // Admin gets full access by default, but we can still fetch or just skip
+          if (currentUser.role === 'admin') return;
+
+          const perms = await getPermissionsByRole(currentUser.role);
+          setUserPermissions(perms);
+        } catch (error) {
+          console.error("Error fetching permissions for sidebar:", error);
+        }
+      }
+    };
+    fetchPermissions();
+  }, [user]); // Re-run when user changes
+
   const handleLogin = (loggedInUser: AuthUser) => {
     setUser(loggedInUser);
     localStorage.setItem('user', JSON.stringify(loggedInUser));
@@ -1778,7 +1800,52 @@ function App() {
       ]
     },
     { id: 'settings', label: 'Cài đặt', icon: Settings, path: '/settings' },
+
   ];
+
+  // Filter menu items based on permissions
+  const filteredMenuItems = menuItems.map(item => {
+    // 1. Admin gets everything
+    if (user?.role === 'admin') return item;
+
+    // 2. Check Item Permission
+    const itemPerm = userPermissions.find(p => p.module === item.id);
+
+    // Default Rule: 
+    // - If 'dashboard', always show.
+    // - If 'settings', check permission (Manager can view, Staff cannot).
+    // - If permission entry exists, respect `can_view`.
+    // - If permission entry MISSING, hide it (fail-safe).
+
+    // Exception for Dashboard
+    if (item.id === 'dashboard') return item;
+
+    // If no permission record found, hide it
+    if (!itemPerm) return null;
+
+    // If permission says cannot view, hide it
+    if (!itemPerm.can_view) return null;
+
+    // 3. Filter SubItems
+    if (item.subItems) {
+      const visibleSubItems = item.subItems.filter(sub => {
+        const subPerm = userPermissions.find(p => p.module === sub.id);
+        // Similar logic for sub-items: if no perm found, hide. If perm.can_view false, hide.
+        if (!subPerm) return false;
+        return subPerm.can_view;
+      });
+
+      // If item has subItems but none are visible, should we hide the parent?
+      // Usually yes, unless parent has its own path?
+      // Personnel parent has subItems but no direct path (it expands).
+      // So if no children, hide parent.
+      if (visibleSubItems.length === 0) return null;
+
+      return { ...item, subItems: visibleSubItems };
+    }
+
+    return item;
+  }).filter(Boolean) as MenuItem[];
 
   return (
     <HashRouter>
@@ -1805,7 +1872,8 @@ function App() {
           {/* Menu */}
           <div className="flex-1 overflow-y-auto py-4 scrollbar-hide">
             <nav className="space-y-1">
-              {menuItems.map(item => (
+
+              {filteredMenuItems.map(item => (
                 <SidebarItem
                   key={item.id}
                   item={item}
@@ -1814,7 +1882,7 @@ function App() {
                   onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false) }}
                 />
               ))}
-            </nav>
+
           </div>
         </aside>
 

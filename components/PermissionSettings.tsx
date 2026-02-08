@@ -10,17 +10,45 @@ export const PermissionSettings = () => {
 
     // Define roles and modules
     const roles = ['manager', 'staff']; // Admin has full access, usually hidden or read-only
-    const modules = [
-        { key: 'overview', label: 'Tổng quan' },
-        { key: 'personnel', label: 'Nhân sự' },
-        { key: 'salary', label: 'Tiền lương' },
-        { key: 'work_schedule', label: 'Lịch công tác' },
-        { key: 'duty_schedule', label: 'Lịch trực' },
-        { key: 'cong_van', label: 'Công văn' },
-        { key: 'party', label: 'Đảng viên' },
-        { key: 'absence', label: 'Quân số nghỉ' },
-        { key: 'patient_card', label: 'Bệnh án' },
-        { key: 'settings', label: 'Cài đặt hệ thống' },
+
+    interface ModuleDef {
+        key: string;
+        label: string;
+        level: number;
+    }
+
+    const modules: ModuleDef[] = [
+        { key: 'dashboard', label: 'Tổng quan', level: 0 },
+        { key: 'personnel', label: 'Quản lý Nhân sự', level: 0 },
+        { key: 'p-dashboard', label: 'Dashboard Nhân sự', level: 1 },
+        { key: 'p-list', label: 'Danh sách nhân viên', level: 1 },
+        { key: 'p-salary', label: 'Lên lương', level: 1 },
+        { key: 'p-family', label: 'Quan hệ gia đình', level: 1 },
+        { key: 'p-training', label: 'Quá trình đào tạo', level: 1 },
+        { key: 'p-work', label: 'Quá trình công tác', level: 1 },
+        { key: 'p-cert', label: 'Chứng chỉ hành nghề', level: 1 },
+        { key: 'p-insurance', label: 'Bảo hiểm y tế', level: 1 },
+        { key: 'leave', label: 'Quản lý phép/Tranh thủ', level: 0 },
+        { key: 'cong-van', label: 'Quản lý công văn', level: 0 },
+        { key: 'research', label: 'Nghiên cứu khoa học', level: 0 },
+        { key: 'r-topics', label: 'Đề tài NCKH', level: 1 },
+        { key: 'r-articles', label: 'Bài báo', level: 1 },
+        { key: 'r-sports', label: 'Hội thao kỹ thuật', level: 1 },
+        { key: 'r-conference', label: 'Tham dự báo cáo', level: 1 },
+        { key: 'rewards', label: 'Khen thưởng - Kỷ luật', level: 0 },
+        { key: 'party-management', label: 'Quản lý đảng viên', level: 0 },
+        { key: 'patient-card-management', label: 'Quản lý thẻ chăm', level: 0 },
+        { key: 'absence', label: 'Quản lý Quân số nghỉ', level: 0 },
+        { key: 'reports', label: 'Báo cáo thống kê', level: 0 },
+        { key: 'combat', label: 'Sẵn sàng chiến đấu', level: 0 },
+        { key: 'duty', label: 'Lịch trực', level: 0 },
+        { key: 'schedule', label: 'Lịch công tác', level: 0 },
+        { key: 'assets', label: 'Quản lý tài sản', level: 0 },
+        { key: 'a-medical-equip', label: 'Thiết bị y tế', level: 1 },
+        { key: 'a-it-equip', label: 'Thiết bị CNTT', level: 1 },
+        { key: 'a-medical-tools', label: 'Dụng cụ y tế', level: 1 },
+        { key: 'a-uniforms', label: 'Quân trang, đồ vải', level: 1 },
+        { key: 'settings', label: 'Cài đặt hệ thống', level: 0 },
     ];
 
     useEffect(() => {
@@ -82,8 +110,8 @@ export const PermissionSettings = () => {
                             key={role}
                             onClick={() => setActiveRole(role)}
                             className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeRole === role
-                                    ? 'bg-blue-100 text-blue-700 shadow-sm'
-                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                                ? 'bg-blue-100 text-blue-700 shadow-sm'
+                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                                 }`}
                         >
                             {role === 'manager' ? 'Quản lý (Manager)' : 'Nhân viên (Staff)'}
@@ -112,9 +140,14 @@ export const PermissionSettings = () => {
 
                                 return (
                                     <tr key={mod.key} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-800">
-                                            {mod.label}
-                                            <div className="text-xs text-slate-400 font-normal mt-0.5">{mod.key}</div>
+                                        <td className={`px-6 py-4 font-medium text-slate-800 ${mod.level > 0 ? 'pl-12 border-l-4 border-l-slate-100' : ''}`}>
+                                            <div className="flex items-center gap-2">
+                                                {mod.level > 0 && <span className="w-2 h-2 rounded-full bg-slate-300"></span>}
+                                                <div>
+                                                    {mod.label}
+                                                    <div className="text-xs text-slate-400 font-normal mt-0.5">{mod.key}</div>
+                                                </div>
+                                            </div>
                                         </td>
                                         {perm ? (
                                             <>
@@ -122,7 +155,8 @@ export const PermissionSettings = () => {
                                                     <Toggle
                                                         checked={perm.can_view}
                                                         onChange={() => handleToggle(perm, 'can_view')}
-                                                        disabled={mod.key === 'overview'} // Overview usually always viewable?
+                                                        onChange={() => handleToggle(perm, 'can_view')}
+                                                        disabled={mod.key === 'dashboard'} // Overview usually always viewable?
                                                     />
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
