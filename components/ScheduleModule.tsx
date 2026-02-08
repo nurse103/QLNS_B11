@@ -4,8 +4,10 @@ import { DutySchedule, getDutySchedules, createDutySchedule, updateDutySchedule,
 import { getPersonnel, Employee } from '../services/personnelService';
 import { Plus, Search, Calendar as CalendarIcon, Edit, Trash2, FileSpreadsheet, Download, Upload, X, Save, ChevronLeft, ChevronRight, Filter, BarChart3, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { usePermissions } from '../hooks/usePermissions';
 
 export const ScheduleModule = () => {
+    const { can_add, can_edit, can_delete } = usePermissions('duty_schedule');
     const [schedules, setSchedules] = useState<DutySchedule[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -252,15 +254,19 @@ export const ScheduleModule = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                        <button onClick={() => { setFormData({}); setIsModalOpen(true); }} className="flex-1 md:flex-none justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium shadow-sm transition-all active:scale-95">
-                            <Plus size={18} /> <span className="hidden sm:inline">Thêm lịch</span><span className="sm:hidden">Thêm</span>
-                        </button>
-                        <div className="relative flex-1 md:flex-none">
-                            <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                            <button className="w-full justify-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2 text-sm font-medium shadow-sm">
-                                <Upload size={18} /> <span className="hidden sm:inline">Import</span>
+                        {can_add && (
+                            <button onClick={() => { setFormData({}); setIsModalOpen(true); }} className="flex-1 md:flex-none justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm font-medium shadow-sm transition-all active:scale-95">
+                                <Plus size={18} /> <span className="hidden sm:inline">Thêm lịch</span><span className="sm:hidden">Thêm</span>
                             </button>
-                        </div>
+                        )}
+                        {can_add && (
+                            <div className="relative flex-1 md:flex-none">
+                                <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                <button className="w-full justify-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2 text-sm font-medium shadow-sm">
+                                    <Upload size={18} /> <span className="hidden sm:inline">Import</span>
+                                </button>
+                            </div>
+                        )}
                         <button onClick={handleExport} className="flex-1 md:flex-none justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm font-medium shadow-sm">
                             <FileSpreadsheet size={18} /> <span className="hidden sm:inline">Export</span>
                         </button>
@@ -359,13 +365,13 @@ export const ScheduleModule = () => {
                                 </tr>
                             ) : (
                                 filteredSchedules.map((schedule) => (
-                                    <tr key={schedule.id} className={`hover:bg-slate-50 transition-colors ${isWeekend(schedule.ngay_truc) ? 'bg-orange-50/30' : ''}`}>
+                                    <tr key={schedule.id} className={`hover:bg-slate-50 transition-colors ${isWeekend(schedule.ngay_truc) ? 'bg-red-50/30' : ''}`}>
                                         <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-100">
                                             {schedule.ngay_truc ? (() => {
                                                 const d = new Date(schedule.ngay_truc);
                                                 return (
                                                     <div>
-                                                        <div className={`text-xs uppercase font-bold ${isWeekend(schedule.ngay_truc) ? 'text-orange-600' : 'text-slate-500'}`}>
+                                                        <div className={`text-xs uppercase font-bold ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-slate-500'}`}>
                                                             {d.toLocaleDateString('vi-VN', { weekday: 'short' })}
                                                         </div>
                                                         <div>{d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}</div>
@@ -373,16 +379,20 @@ export const ScheduleModule = () => {
                                                 )
                                             })() : '-'}
                                         </td>
-                                        <td className="px-4 py-3 border-r border-slate-100 font-medium text-[#009900]">{schedule.bac_sy}</td>
+                                        <td className={`px-4 py-3 border-r border-slate-100 font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.bac_sy}</td>
 
                                         <td className="px-4 py-3 border-r border-slate-100 text-slate-600">{schedule.sau_dai_hoc}</td>
-                                        <td className="px-4 py-3 border-r border-slate-100 max-w-xs truncate text-blue-700 font-medium" title={schedule.dieu_duong || ''}>{schedule.dieu_duong}</td>
+                                        <td className={`px-4 py-3 border-r border-slate-100 max-w-xs truncate font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-blue-700'}`} title={schedule.dieu_duong || ''}>{schedule.dieu_duong}</td>
                                         <td className="px-4 py-3 border-r border-slate-100 text-slate-600">{schedule.phu_dieu_duong}</td>
-                                        <td className="px-4 py-3 font-bold italic text-[#009900] text-xs">{schedule.ghi_chu}</td>
+                                        <td className={`px-4 py-3 font-bold italic text-xs ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.ghi_chu}</td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <button onClick={() => handleEdit(schedule)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Edit size={16} /></button>
-                                                <button onClick={() => handleDelete(schedule.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
+                                                {can_edit && (
+                                                    <button onClick={() => handleEdit(schedule)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><Edit size={16} /></button>
+                                                )}
+                                                {can_delete && (
+                                                    <button onClick={() => handleDelete(schedule.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 size={16} /></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -401,24 +411,24 @@ export const ScheduleModule = () => {
                             const date = new Date(schedule.ngay_truc);
                             const isWE = isWeekend(schedule.ngay_truc);
                             return (
-                                <div key={schedule.id} className={`bg-white rounded-xl shadow-sm border p-4 space-y-3 ${isWE ? 'border-orange-200' : 'border-slate-200'}`}>
+                                <div key={schedule.id} className={`bg-white rounded-xl shadow-sm border p-4 space-y-3 ${isWE ? 'border-red-200' : 'border-slate-200'}`}>
                                     {/* Card Header */}
                                     <div className="flex justify-between items-start pb-3 border-b border-slate-50">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center ${isWE ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700'}`}>
+                                            <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center ${isWE ? 'bg-red-100 text-red-700' : 'bg-blue-50 text-blue-700'}`}>
                                                 <span className="text-xs font-bold uppercase">{date.toLocaleDateString('vi-VN', { weekday: 'short' })}</span>
                                                 <span className="text-lg font-bold leading-none">{date.getDate()}</span>
                                             </div>
                                             <div>
                                                 <div className="text-xs text-slate-400">Tháng {date.getMonth() + 1}</div>
-                                                <div className={`text-sm font-semibold ${isWE ? 'text-orange-600' : 'text-slate-700'}`}>
+                                                <div className={`text-sm font-semibold ${isWE ? 'text-red-600' : 'text-slate-700'}`}>
                                                     {isWE ? 'Trực nghỉ/lễ' : 'Trực thường'}
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-1">
-                                            <button onClick={() => handleEdit(schedule)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"><Edit size={18} /></button>
-                                            <button onClick={() => handleDelete(schedule.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"><Trash2 size={18} /></button>
+                                            {can_edit && <button onClick={() => handleEdit(schedule)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"><Edit size={18} /></button>}
+                                            {can_delete && <button onClick={() => handleDelete(schedule.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"><Trash2 size={18} /></button>}
                                         </div>
                                     </div>
 
@@ -426,19 +436,19 @@ export const ScheduleModule = () => {
                                     <div className="space-y-2 text-sm">
                                         <div className="flex gap-2">
                                             <span className="text-slate-500 w-24 shrink-0 font-medium">Bác sỹ:</span>
-                                            <span className="text-[#009900] font-semibold">{schedule.bac_sy || '---'}</span>
+                                            <span className={`font-semibold ${isWE ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.bac_sy || '---'}</span>
                                         </div>
                                         {schedule.sau_dai_hoc && (
                                             <div className="flex gap-2">
                                                 <span className="text-slate-500 w-24 shrink-0 font-medium">Phụ bác sỹ:</span>
-                                                <span className="text-slate-700">
+                                                <span className={`${isWE ? 'text-red-600' : 'text-slate-700'}`}>
                                                     {schedule.sau_dai_hoc}
                                                 </span>
                                             </div>
                                         )}
                                         <div className="flex gap-2">
                                             <span className="text-slate-500 w-24 shrink-0 font-medium">Điều dưỡng:</span>
-                                            <span className="text-blue-700 font-medium">{schedule.dieu_duong || '---'}</span>
+                                            <span className={`font-medium ${isWE ? 'text-red-600' : 'text-blue-700'}`}>{schedule.dieu_duong || '---'}</span>
                                         </div>
                                         {schedule.phu_dieu_duong && (
                                             <div className="flex gap-2">
@@ -449,7 +459,7 @@ export const ScheduleModule = () => {
                                         {schedule.ghi_chu && (
                                             <div className="flex gap-2 bg-slate-50 p-2 rounded">
                                                 <span className="text-slate-400 shrink-0"><Clock size={14} className="mt-0.5" /></span>
-                                                <span className="font-bold italic text-[#009900] text-xs break-all">{schedule.ghi_chu}</span>
+                                                <span className={`font-bold italic text-xs break-all ${isWE ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.ghi_chu}</span>
                                             </div>
                                         )}
                                     </div>

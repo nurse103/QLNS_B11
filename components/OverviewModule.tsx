@@ -124,6 +124,12 @@ export const OverviewModule = () => {
         return checkDate >= startOfWeek && checkDate <= endOfWeek;
     };
 
+    const isWeekend = (dateStr: string) => {
+        const d = new Date(dateStr);
+        const day = d.getDay();
+        return day === 0 || day === 6;
+    };
+
     // --- Derived Data ---
 
     // 1. Ongoing and Overdue Work (Công việc đang làm & Quá hạn)
@@ -219,19 +225,23 @@ export const OverviewModule = () => {
     const isPartyMember = (p: Employee) => !!(p.ngay_vao_dang || p.so_the_dang);
 
     // Categories
-    const doctors = personnel.filter(p => checkRole(p, ['Bác sỹ', 'Chủ nhiệm khoa', 'Phó chủ nhiệm khoa', 'BS']));
-    const nurses = personnel.filter(p => checkRole(p, ['Điều dưỡng']));
-    const residents = personnel.filter(p => checkRole(p, ['Học viên', 'Nội trú', 'Cao học']));
+    // Filter for Active Personnel only (Trang thai == 'Đang làm việc')
+    // Note: Assuming 'personnel' contains all data.
+    const activePersonnel = personnel.filter(p => p.trang_thai === 'Đang làm việc');
+
+    const doctors = activePersonnel.filter(p => checkRole(p, ['Bác sỹ', 'Chủ nhiệm khoa', 'Phó chủ nhiệm khoa', 'BS']));
+    const nurses = activePersonnel.filter(p => checkRole(p, ['Điều dưỡng']));
+    const residents = activePersonnel.filter(p => checkRole(p, ['Học viên', 'Nội trú', 'Cao học']));
 
     // Party Stats
-    const partyMembers = personnel.filter(isPartyMember);
+    const partyMembers = activePersonnel.filter(isPartyMember);
     const doctorPartyMembers = doctors.filter(isPartyMember);
     const nursePartyMembers = nurses.filter(isPartyMember);
 
 
     const stats = {
         personnel: {
-            total: personnel.length,
+            total: activePersonnel.length,
             doctors: doctors.length,
             nurses: nurses.length,
             residents: residents.length
@@ -355,7 +365,7 @@ export const OverviewModule = () => {
                                         <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-orange-600 font-bold text-xs border border-orange-200 shadow-sm">BS</div>
                                         <div>
                                             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Bác sỹ trực</p>
-                                            <p className="text-sm font-bold text-slate-800">{duty.bac_sy}</p>
+                                            <p className={`text-sm font-bold ${isWeekend(duty.ngay_truc) ? 'text-red-600' : 'text-slate-800'}`}>{duty.bac_sy}</p>
                                         </div>
                                     </div>
                                     {duty.dieu_duong && (
@@ -363,7 +373,7 @@ export const OverviewModule = () => {
                                             <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-blue-600 font-bold text-xs border border-blue-200 shadow-sm">ĐD</div>
                                             <div>
                                                 <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wide">Điều dưỡng</p>
-                                                <p className="text-sm font-medium text-slate-800 leading-relaxed">
+                                                <p className={`text-sm font-medium leading-relaxed ${isWeekend(duty.ngay_truc) ? 'text-red-600' : 'text-slate-800'}`}>
                                                     {duty.dieu_duong.split(/[\n,]/).map(n => n.trim()).filter(n => n).join(', ')}
                                                 </p>
                                             </div>
@@ -399,7 +409,7 @@ export const OverviewModule = () => {
                     <div className="grid grid-cols-3 gap-0 border-b border-slate-100 divide-x divide-slate-100 bg-slate-50/50">
                         <div className="p-3 text-center">
                             <p className="text-[10px] text-slate-500 uppercase font-semibold mb-0.5">Tổng số</p>
-                            <p className="text-lg font-bold text-slate-700">{personnel.length}</p>
+                            <p className="text-lg font-bold text-slate-700">{activePersonnel.length}</p>
                         </div>
                         <div className="p-3 text-center bg-red-50/30">
                             <p className="text-[10px] text-red-500 uppercase font-semibold mb-0.5">Vắng</p>
@@ -407,7 +417,7 @@ export const OverviewModule = () => {
                         </div>
                         <div className="p-3 text-center bg-green-50/30">
                             <p className="text-[10px] text-green-600 uppercase font-semibold mb-0.5">Đi làm</p>
-                            <p className="text-lg font-bold text-green-600">{personnel.length - absences.length}</p>
+                            <p className="text-lg font-bold text-green-600">{activePersonnel.length - absences.length}</p>
                         </div>
                     </div>
 
@@ -525,7 +535,9 @@ export const OverviewModule = () => {
                         <h3 className="font-bold text-white uppercase text-sm">Lịch công tác tuần này</h3>
                         <Link to="/schedule" className="text-xs text-white/80 hover:text-white font-medium">Chi tiết</Link>
                     </div>
-                    <div className="overflow-x-auto">
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 text-slate-500 font-medium">
                                 <tr>
@@ -555,6 +567,35 @@ export const OverviewModule = () => {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden p-4 space-y-3">
+                        {weeklyWork.length > 0 ? (
+                            weeklyWork.map(item => (
+                                <div key={item.id} className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex gap-3">
+                                    <div className="flex flex-col items-center justify-center w-12 h-12 bg-white border border-slate-200 rounded-lg shrink-0">
+                                        <span className="text-xs text-slate-500 font-medium">
+                                            T{new Date(item.ngay_bat_dau).getMonth() + 1}
+                                        </span>
+                                        <span className="text-lg font-bold text-blue-600 leading-none">
+                                            {new Date(item.ngay_bat_dau).getDate()}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-slate-800 line-clamp-2 mb-1">{item.noi_dung}</p>
+                                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                                            <Users size={12} />
+                                            <span>
+                                                {Array.isArray(item.nguoi_thuc_hien) ? `${item.nguoi_thuc_hien.length} người thực hiện` : '---'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center text-slate-400 italic py-4 text-sm">Tuần này chưa có lịch công tác</div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Weekly Duty Schedule */}
@@ -563,7 +604,9 @@ export const OverviewModule = () => {
                         <h3 className="font-bold text-white uppercase text-sm">Lịch trực tuần này</h3>
                         <Link to="/duty" className="text-xs text-white/80 hover:text-white font-medium">Chi tiết</Link>
                     </div>
-                    <div className="overflow-x-auto">
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 text-slate-500 font-medium">
                                 <tr>
@@ -575,12 +618,12 @@ export const OverviewModule = () => {
                             <tbody className="divide-y divide-slate-100">
                                 {weeklyDuty.length > 0 ? (
                                     weeklyDuty.map(item => (
-                                        <tr key={item.id} className="hover:bg-slate-50">
-                                            <td className="px-4 py-3 text-slate-600">
+                                        <tr key={item.id} className={`hover:bg-slate-50 ${isWeekend(item.ngay_truc) ? 'bg-red-50/20' : ''}`}>
+                                            <td className={`px-4 py-3 ${isWeekend(item.ngay_truc) ? 'text-red-600 font-bold' : 'text-slate-600'}`}>
                                                 {new Date(item.ngay_truc).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-green-700">{item.bac_sy}</td>
-                                            <td className="px-4 py-3 text-blue-700 max-w-[150px] truncate" title={item.dieu_duong || ''}>{item.dieu_duong}</td>
+                                            <td className={`px-4 py-3 font-medium ${isWeekend(item.ngay_truc) ? 'text-red-600' : 'text-green-700'}`}>{item.bac_sy}</td>
+                                            <td className={`px-4 py-3 max-w-[150px] truncate ${isWeekend(item.ngay_truc) ? 'text-red-600 font-medium' : 'text-blue-700'}`} title={item.dieu_duong || ''}>{item.dieu_duong}</td>
                                         </tr>
                                     ))
                                 ) : (
@@ -590,6 +633,46 @@ export const OverviewModule = () => {
                                 )}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden p-4 space-y-3">
+                        {weeklyDuty.length > 0 ? (
+                            weeklyDuty.map(item => (
+                                <div key={item.id} className={`bg-slate-50 border rounded-lg p-3 ${isWeekend(item.ngay_truc) ? 'border-red-200 bg-red-50/30' : 'border-slate-100'}`}>
+                                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200 border-dashed">
+                                        <Calendar size={14} className="text-slate-400" />
+                                        <span className={`text-sm font-semibold ${isWeekend(item.ngay_truc) ? 'text-red-600' : 'text-slate-700'}`}>
+                                            {new Date(item.ngay_truc).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-start gap-2">
+                                            <div className="mt-0.5 p-1 bg-green-100 text-green-600 rounded">
+                                                <Stethoscope size={12} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 uppercase font-bold">Bác sỹ</p>
+                                                <p className={`text-sm font-medium ${isWeekend(item.ngay_truc) ? 'text-red-600' : 'text-slate-800'}`}>{item.bac_sy}</p>
+                                            </div>
+                                        </div>
+                                        {item.dieu_duong && (
+                                            <div className="flex items-start gap-2">
+                                                <div className="mt-0.5 p-1 bg-blue-100 text-blue-600 rounded">
+                                                    <Heart size={12} />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] text-slate-500 uppercase font-bold">Điều dưỡng</p>
+                                                    <p className={`text-sm ${isWeekend(item.ngay_truc) ? 'text-red-600 font-medium' : 'text-slate-800'}`}>{item.dieu_duong}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center text-slate-400 italic py-4 text-sm">Tuần này chưa có lịch trực</div>
+                        )}
                     </div>
                 </div>
             </div>

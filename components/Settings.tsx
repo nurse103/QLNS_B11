@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { getBackground, updateBackground } from '../services/authService';
-import { Upload, Image as ImageIcon, Save, CheckCircle, AlertCircle, Users, Layout } from 'lucide-react';
+import { Upload, Image as ImageIcon, Save, CheckCircle, AlertCircle, Users, Layout, Shield } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { CardManagement } from './CardManagement';
+import { PermissionSettings } from './PermissionSettings';
+import { getAuthUser } from '../services/authService';
 import { CreditCard } from 'lucide-react';
 
 export const Settings = () => {
-    const [activeTab, setActiveTab] = useState<'general' | 'users' | 'cards'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'users' | 'cards' | 'permissions'>('general');
     const [background, setBackground] = useState('');
     const [file, setFile] = useState<File | null>(null);
+    const [userRole, setUserRole] = useState<string>('');
+
+    useEffect(() => {
+        const user = getAuthUser();
+        if (user) setUserRole(user.role);
+    }, []);
     const [preview, setPreview] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -85,6 +93,15 @@ export const Settings = () => {
                                 <CreditCard size={18} />
                                 Quản lý danh sách thẻ
                             </button>
+                            {userRole === 'admin' && (
+                                <button
+                                    onClick={() => setActiveTab('permissions')}
+                                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'permissions' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                    <Shield size={18} />
+                                    Phân quyền người dùng
+                                </button>
+                            )}
                         </nav>
                     </div>
                 </div>
@@ -164,6 +181,10 @@ export const Settings = () => {
                     ) : activeTab === 'cards' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
                             <CardManagement />
+                        </div>
+                    ) : activeTab === 'permissions' && userRole === 'admin' ? (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
+                            <PermissionSettings />
                         </div>
                     ) : null}
                 </div>

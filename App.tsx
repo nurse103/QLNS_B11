@@ -68,6 +68,7 @@ import { OverviewModule } from './components/OverviewModule';
 import { WorkScheduleModule } from './components/WorkScheduleModule';
 import { AbsenceModule } from './components/AbsenceModule';
 import { PatientCardModule } from './components/PatientCardModule';
+import { CongVanModule } from './components/CongVanModule';
 
 // Charts
 import {
@@ -231,11 +232,26 @@ const Dashboard = () => {
           getAllTraining()
         ]);
 
+        // FILTER FOR ACTIVE EMPLOYEES and sort (optional)
+        // Only count 'Đang làm việc' for statistics
+        const activeData = data.filter(e => e.trang_thai === 'Đang làm việc');
+
         // 1. Calculate Basic Stats
-        const total = data.length;
-        const partyMembers = data.filter(e => e.ngay_vao_dang || e.so_the_dang).length;
-        // Simple check for "Nghỉ" in status
-        const onLeave = data.filter(e => e.trang_thai && e.trang_thai.toLowerCase().includes('nghỉ')).length;
+        const total = activeData.length;
+        const partyMembers = activeData.filter(e => e.ngay_vao_dang || e.so_the_dang).length;
+        // Simple check for "Nghỉ" in status - but since we filtered for 'Đang làm việc', this might be 0?
+        // Wait, "Đang làm việc" is the main status. "Nghỉ phép", "Nghỉ ốm" might be in 'trang_thai' if that is how it's used?
+        // Usually 'trang_thai' determines if they are currently employed or resigned.
+        // If 'trang_thai' tracks daily status like "Nghỉ phép", then filtering by "Đang làm việc" excludes them?
+        // Based on user request "chỉ tính nhân viên có trạng thái đang làm việc", let's assume this means excluding "Đã nghỉ việc", "Đã chuyển công tác", etc.
+        // If "Nghỉ phép" is a status that replaces "Đang làm việc", then we should include it?
+        // BUT usually "Đã nghỉ việc" is the one to exclude.
+        // Let's assume we want to exclude "Đã nghỉ việc", "Đã chuyển công tác", "Đã nghỉ hưu".
+        // Or strictly "Đang làm việc".
+        // Let's stick to the user's exact words: "trạng thái đang làm việc".
+        // So we use activeData for all charts.
+
+        const onLeave = activeData.filter(e => e.trang_thai && e.trang_thai.toLowerCase().includes('nghỉ')).length;
 
         setStats({
           total,
@@ -246,7 +262,7 @@ const Dashboard = () => {
 
         // 2. Calculate Pie Chart Data (Structure/Doi Tuong)
         const structureCount: Record<string, number> = {};
-        data.forEach(e => {
+        activeData.forEach(e => {
           const type = e.doi_tuong || 'Khác';
           structureCount[type] = (structureCount[type] || 0) + 1;
         });
@@ -259,7 +275,7 @@ const Dashboard = () => {
 
         // 3. Calculate Gender Pie Chart Data
         const genderCount = { Nam: 0, Nu: 0, Khac: 0 };
-        data.forEach(e => {
+        activeData.forEach(e => {
           const g = e.gioi_tinh ? e.gioi_tinh.toLowerCase() : '';
           if (g === 'nam') genderCount.Nam++;
           else if (g === 'nữ' || g === 'nu') genderCount.Nu++;
@@ -272,7 +288,7 @@ const Dashboard = () => {
         ]);
 
         // 4. Calculate Education Bar Chart Data
-        const activeIds = new Set(data.map(e => e.id));
+        const activeIds = new Set(activeData.map(e => e.id));
         const relevantTraining = trainingData.filter(t => t.dsnv_id && activeIds.has(t.dsnv_id) && t.trinh_do_dao_tao);
 
         const eduCount: Record<string, number> = {};
@@ -289,7 +305,7 @@ const Dashboard = () => {
 
         // 5. Calculate Job Title (Chuc Vu) Chart Data
         const jobCount: Record<string, number> = {};
-        data.forEach(e => {
+        activeData.forEach(e => {
           const job = e.chuc_vu?.trim() || 'Chưa có';
           jobCount[job] = (jobCount[job] || 0) + 1;
         });
@@ -304,7 +320,7 @@ const Dashboard = () => {
 
         // 6. Calculate Birthday List (Current Month)
         const currentMonth = new Date().getMonth(); // 0-11
-        const birthdays = data.filter(e => {
+        const birthdays = activeData.filter(e => {
           if (!e.ngay_sinh) return false;
           const d = new Date(e.ngay_sinh);
           return d.getMonth() === currentMonth;
@@ -318,7 +334,7 @@ const Dashboard = () => {
 
         // 7. Calculate Professional Certificate Data (Chung Chi Hanh Nghe)
         const certCount: Record<string, number> = {};
-        data.forEach(e => {
+        activeData.forEach(e => {
           if (e.chung_chi_hanh_nghe) {
             // Determine if it's a comma separated list or single value? 
             // Assuming simple text for now based on requirement "Biểu đồ chứng chỉ hành nghề"
@@ -356,10 +372,11 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-slate-800">Tổng quan nhân sự</h1>
           <p className="text-slate-500 mt-1">Số liệu cập nhật đến ngày hôm nay</p>
         </div>
-        <div className="flex gap-2">
+        {/* Hidden buttons per requirement */}
+        {/* <div className="flex gap-2">
           <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50">Xuất báo cáo</button>
           <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">Thêm nhân viên</button>
-        </div>
+        </div> */}
       </div>
 
       {/* Stats Grid */}
@@ -636,7 +653,19 @@ const PersonnelList = () => {
     setLoading(true);
     try {
       const data = await getPersonnel();
-      setPersonnel(data);
+      // Sort: Active first (not 'Đã nghỉ việc'), then Alphabetical name
+      const sortedData = data.sort((a, b) => {
+        const isResignedA = a.trang_thai === 'Đã nghỉ việc';
+        const isResignedB = b.trang_thai === 'Đã nghỉ việc';
+
+        // If one is resigned and other is not, put resigned last
+        if (isResignedA && !isResignedB) return 1;
+        if (!isResignedA && isResignedB) return -1;
+
+        // If both same status (both active or both resigned), sort by name
+        return (a.ho_va_ten || '').localeCompare(b.ho_va_ten || '');
+      });
+      setPersonnel(sortedData);
     } catch (error) {
       console.error("Failed to fetch personnel:", error);
     } finally {
@@ -1711,6 +1740,7 @@ function App() {
     },
 
     { id: 'leave', label: 'Quản lý phép/Tranh thủ', icon: CalendarClock, path: '/leave' },
+    { id: 'cong-van', label: 'Quản lý công văn', icon: FileText, path: '/cong-van' },
     {
       id: 'research',
       label: 'Nghiên cứu khoa học',
@@ -1881,6 +1911,7 @@ function App() {
               <Route path="/leave" element={<LeaveModule />} />
               <Route path="/quan-so-nghi" element={<AbsenceModule />} />
               <Route path="/patient-cards" element={<PatientCardModule />} />
+              <Route path="/cong-van" element={<CongVanModule />} />
               <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
               <Route path="/rewards" element={<PlaceholderPage title="Khen thưởng & Kỷ luật" />} />
               <Route path="/combat" element={<PlaceholderPage title="Sẵn sàng chiến đấu" />} />
