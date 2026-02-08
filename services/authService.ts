@@ -100,3 +100,5 @@ export const getAuthUser = (): User | null => {
     }
     return null;
 };
+// Alias for consistency
+export const getCurrentUser = getAuthUser;
