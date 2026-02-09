@@ -3,6 +3,7 @@ import { AbsenceRecord, Employee } from '../types';
 import { getAbsencesByDate, createAbsenceRecord, updateAbsenceRecord, deleteAbsenceRecord, checkAbsenceExists } from '../services/absenceService';
 import { getPersonnel } from '../services/personnelService';
 import { getDutySchedules } from '../services/dutyScheduleService';
+import { getAuthUser } from '../services/authService';
 import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, FileText, Zap, Copy, CheckSquare, Square } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -11,6 +12,9 @@ export const AbsenceModule = () => {
     const [records, setRecords] = useState<AbsenceRecord[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const currentUser = getAuthUser();
+    const canModify = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
     // Selection & Copy State
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -277,19 +281,23 @@ export const AbsenceModule = () => {
                             <Copy size={18} /> Sao chép ({selectedIds.size})
                         </button>
                     )}
-                    <button
-                        onClick={handleAutoGenerate}
-                        disabled={isAutoGenerating}
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
-                    >
-                        <Zap size={18} /> {isAutoGenerating ? 'Đang tạo...' : 'Tự động tạo nghỉ trực'}
-                    </button>
-                    <button
-                        onClick={() => handleOpenModal()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
-                    >
-                        <Plus size={18} /> Thêm mới
-                    </button>
+                    {canModify && (
+                        <>
+                            <button
+                                onClick={handleAutoGenerate}
+                                disabled={isAutoGenerating}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                            >
+                                <Zap size={18} /> {isAutoGenerating ? 'Đang tạo...' : 'Tự động tạo nghỉ trực'}
+                            </button>
+                            <button
+                                onClick={() => handleOpenModal()}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                            >
+                                <Plus size={18} /> Thêm mới
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 

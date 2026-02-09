@@ -32,6 +32,9 @@ export const CongVanModule = () => {
     const [filterType, setFilterType] = useState<string>('All');
     const [uploading, setUploading] = useState(false);
 
+    const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+    const [groupInput, setGroupInput] = useState('');
+
     // Fetch Data
     const fetchData = async () => {
         setLoading(true);
@@ -53,6 +56,28 @@ export const CongVanModule = () => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAddGroup = (e?: React.FormEvent) => {
+        e?.preventDefault(); // Prevent form submission if called from Enter key
+        if (!groupInput.trim()) return;
+
+        const newGroup = groupInput.trim();
+        if (!selectedGroups.includes(newGroup)) {
+            setSelectedGroups([...selectedGroups, newGroup]);
+        }
+        setGroupInput('');
+    };
+
+    const handleRemoveGroup = (groupToRemove: string) => {
+        setSelectedGroups(selectedGroups.filter(g => g !== groupToRemove));
+    };
+
+    const handleGroupInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddGroup();
+        }
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,15 +180,21 @@ export const CongVanModule = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const submissionData = {
+                ...formData,
+                phan_nhom: selectedGroups.join(', ')
+            };
+
             if (formData.id) {
-                await updateCongVan(formData.id, formData);
+                await updateCongVan(formData.id, submissionData);
                 alert("Cập nhật công văn thành công!");
             } else {
-                await createCongVan(formData as any);
+                await createCongVan(submissionData as any);
                 alert("Thêm mới công văn thành công!");
             }
             setIsModalOpen(false);
             setFormData({});
+            setSelectedGroups([]);
             fetchData();
         } catch (error) {
             console.error("Submit failed:", error);
@@ -173,6 +204,12 @@ export const CongVanModule = () => {
 
     const handleEdit = (doc: CongVan) => {
         setFormData(doc);
+        // Initialize groups from comma-separated string
+        if (doc.phan_nhom) {
+            setSelectedGroups(doc.phan_nhom.split(',').map(s => s.trim()).filter(Boolean));
+        } else {
+            setSelectedGroups([]);
+        }
         setIsModalOpen(true);
     };
 
@@ -193,6 +230,7 @@ export const CongVanModule = () => {
             loai_cong_van: 'CV Đến',
             ngay_ban_hanh: new Date().toISOString().split('T')[0]
         });
+        setSelectedGroups([]);
         setIsModalOpen(true);
     };
 
@@ -211,7 +249,11 @@ export const CongVanModule = () => {
 
     // Extract unique values for autocomplete
     const uniqueCoQuan = Array.from(new Set(documents.map(d => d.co_quan_ban_hanh).filter(Boolean)));
-    const uniquePhanNhom = Array.from(new Set(documents.map(d => d.phan_nhom).filter(Boolean)));
+    // Flatten all groups from comma separated strings
+    const uniquePhanNhom = Array.from(new Set(
+        documents.flatMap(d => d.phan_nhom ? d.phan_nhom.split(',').map(s => s.trim()) : [])
+            .filter(Boolean)
+    ));
 
     return (
         <div className="p-6 space-y-6 animate-fade-in">
@@ -356,9 +398,17 @@ export const CongVanModule = () => {
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{doc.co_quan_ban_hanh}</td>
                                         <td className="px-4 py-3 text-slate-600">
-                                            <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs">
-                                                {doc.phan_nhom || '---'}
-                                            </span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {doc.phan_nhom ? (
+                                                    doc.phan_nhom.split(',').map((group, idx) => (
+                                                        <span key={idx} className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs whitespace-nowrap">
+                                                            {group.trim()}
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-slate-300">---</span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             {renderFiles(doc.file_dinh_kem)}
@@ -503,15 +553,38 @@ export const CongVanModule = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">Phân nhóm</label>
-                                    <input
-                                        type="text"
-                                        name="phan_nhom"
-                                        list="phanNhomOptions"
-                                        value={formData.phan_nhom || ''}
-                                        onChange={handleInputChange}
-                                        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-                                        placeholder="VD: Hành chính, Chuyên môn"
-                                    />
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        {selectedGroups.map((group, idx) => (
+                                            <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs flex items-center gap-1">
+                                                {group}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveGroup(group)}
+                                                    className="text-blue-400 hover:text-blue-600"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            list="phanNhomOptions"
+                                            value={groupInput}
+                                            onChange={e => setGroupInput(e.target.value)}
+                                            onKeyDown={handleGroupInputKeyDown}
+                                            className="flex-1 border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                            placeholder="Nhập nhóm và ấn Enter..."
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAddGroup()}
+                                            className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200"
+                                        >
+                                            <Plus size={18} />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">File đính kèm</label>

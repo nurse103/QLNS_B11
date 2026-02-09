@@ -2,14 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardRecord } from '../types';
 import { getCards, getCardRecords, createCardRecord, updateCardRecord, checkPatientBorrowing } from '../services/cardService';
 import { getAuthUser } from '../services/authService';
+import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../services/supabaseClient';
-import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, Phone, CreditCard, AlertCircle, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, Phone, CreditCard, AlertCircle, Eye, Download, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export const PatientCardModule = () => {
     const [records, setRecords] = useState<CardRecord[]>([]);
     const [cards, setCards] = useState<Card[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter State
+    type FilterType = 'all' | 'today' | 'yesterday' | '2_days_ago' | '3_days_ago' | 'custom';
+    const [filterType, setFilterType] = useState<FilterType>('all');
+    const [customDateFrom, setCustomDateFrom] = useState('');
+    const [customDateTo, setCustomDateTo] = useState('');
 
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +46,14 @@ export const PatientCardModule = () => {
     const [warning, setWarning] = useState<string | null>(null);
 
     const currentUser = getAuthUser();
+    // Correct key matching App.tsx and DB
+    const { can_add, can_edit, can_delete, can_view } = usePermissions('patient-card-management');
+
+    // If no view permission, we might want to redirect or show message, 
+    // but the parent likely handles hiding. 
+    // However, for safety:
+    if (!currentUser) return null; // Or loading state
+
 
     useEffect(() => {
         fetchData();
@@ -84,11 +100,50 @@ export const PatientCardModule = () => {
     };
 
     // Filter Logic
-    const filteredRecords = records.filter(r =>
-        r.ho_ten_benh_nhan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.so_the.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.ho_ten_nguoi_cham.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredRecords = records.filter(r => {
+        const matchesSearch =
+            r.ho_ten_benh_nhan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.so_the.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            r.ho_ten_nguoi_cham.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        if (filterType === 'all') return true;
+
+        const recordDate = new Date(r.ngay_muon);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (filterType === 'custom') {
+            if (!customDateFrom && !customDateTo) return true;
+            const from = customDateFrom ? new Date(customDateFrom) : new Date(0); // Beginning of time
+            const to = customDateTo ? new Date(customDateTo) : new Date(8640000000000000); // End of time
+            to.setHours(23, 59, 59, 999); // Include the whole end day
+
+            // Adjust from date to start of day
+            from.setHours(0, 0, 0, 0);
+
+            return recordDate >= from && recordDate <= to;
+        }
+
+        // Specific days
+        const targetDate = new Date(today);
+        if (filterType === 'yesterday') {
+            targetDate.setDate(today.getDate() - 1);
+        } else if (filterType === '2_days_ago') {
+            targetDate.setDate(today.getDate() - 2);
+        } else if (filterType === '3_days_ago') {
+            targetDate.setDate(today.getDate() - 3);
+        }
+        // 'today' is already targetDate
+
+        const startOfTarget = new Date(targetDate);
+        startOfTarget.setHours(0, 0, 0, 0);
+        const endOfTarget = new Date(targetDate);
+        endOfTarget.setHours(23, 59, 59, 999);
+
+        return recordDate >= startOfTarget && recordDate <= endOfTarget;
+    });
 
     // Form Handlers
     const handleOpenModal = () => {
@@ -267,6 +322,102 @@ export const PatientCardModule = () => {
         }
     };
 
+    const handleExport = () => {
+        const dataToExport = records.map(r => ({
+            'Ngày mượn': r.ngay_muon ? new Date(r.ngay_muon).toLocaleDateString('vi-VN') : '',
+            'Họ tên bệnh nhân': r.ho_ten_benh_nhan,
+            'Năm sinh': r.nam_sinh,
+            'Họ tên người chăm': r.ho_ten_nguoi_cham,
+            'SĐT người chăm': r.sdt_nguoi_cham,
+            'Số thẻ': r.so_the,
+            'Tiền cược': r.so_tien_cuoc,
+            'Trạng thái': r.trang_thai,
+            'Người cho mượn': r.nguoi_cho_muon,
+            'Ghi chú': r.ghi_chu
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Danh_sach_muon_the");
+        XLSX.writeFile(wb, "Danh_sach_muon_the.xlsx");
+    };
+
+    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const bstr = evt.target?.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const data = XLSX.utils.sheet_to_json(ws);
+
+            if (data.length === 0) {
+                alert("File không có dữ liệu!");
+                return;
+            }
+
+            if (!window.confirm(`Tìm thấy ${data.length} dòng dữ liệu. Bạn có muốn nhập không?`)) return;
+
+            setLoading(true);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const row of data as any[]) {
+                try {
+                    // Try to map various possible column names
+                    const ngayMuonRaw = row['Ngày mượn'] || row['Date'] || row['ngay_muon'];
+                    let ngayMuon = new Date().toISOString();
+
+                    // Simple date parsing attempt
+                    if (ngayMuonRaw) {
+                        // Check if Excel date number or string
+                        if (typeof ngayMuonRaw === 'number') {
+                            // Excel date conversion if needed, validation library usually handles this if passing option cellDates: true, 
+                            // but read uses type: binary.
+                            // Let's assume user inputs string DD/MM/YYYY or similar, or just default to NOW if invalid for safety.
+                        } else {
+                            // Try to parse string
+                            // If format is DD/MM/YYYY
+                            const parts = ngayMuonRaw.split('/');
+                            if (parts.length === 3) {
+                                ngayMuon = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).toISOString();
+                            }
+                        }
+                    }
+
+                    const record: any = {
+                        ho_ten_benh_nhan: row['Họ tên bệnh nhân'] || row['Patient Name'] || row['ho_ten_benh_nhan'],
+                        nam_sinh: row['Năm sinh']?.toString() || row['Birth Year'] || row['nam_sinh'],
+                        ho_ten_nguoi_cham: row['Họ tên người chăm'] || row['Caregiver Name'] || row['ho_ten_nguoi_cham'],
+                        sdt_nguoi_cham: row['SĐT người chăm']?.toString() || row['Phone'] || row['sdt_nguoi_cham'],
+                        so_the: row['Số thẻ']?.toString() || row['Card Number'] || row['so_the'],
+                        so_tien_cuoc: Number(row['Tiền cược'] || row['Deposit'] || row['so_tien_cuoc'] || 500000),
+                        nguoi_cho_muon: currentUser?.full_name || currentUser?.username || 'Admin',
+                        trang_thai: 'Đang mượn thẻ',
+                        ngay_muon: ngayMuon,
+                        trang_thai_tien_muon: 'Chưa bàn giao',
+                        ghi_chu: row['Ghi chú'] || row['Note'] || row['ghi_chu']
+                    };
+
+                    if (record.ho_ten_benh_nhan && record.so_the) {
+                        await createCardRecord(record);
+                        successCount++;
+                    }
+                } catch (err) {
+                    console.error("Import row failed", err);
+                    failCount++;
+                }
+            }
+            alert(`Nhập hoàn tất! Thành công: ${successCount}, Thất bại: ${failCount}`);
+            fetchData();
+            e.target.value = ''; // Reset input
+        };
+        reader.readAsBinaryString(file);
+    };
+
     const renderMoneyStatusBadge = (status: string | null | undefined) => {
         if (status === 'Đã bàn giao') return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">Đã bàn giao</span>;
         return <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">Chưa bàn giao</span>;
@@ -292,6 +443,31 @@ export const PatientCardModule = () => {
                             <CreditCard size={18} /> Cập nhật BG ({selectedIds.length})
                         </button>
                     )}
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={handleExport}
+                                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                                title="Xuất Excel"
+                            >
+                                <Download size={18} /> <span className="hidden md:inline">Xuất Excel</span>
+                            </button>
+                            <div className="relative">
+                                <input
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    onChange={handleImport}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    title="Nhập từ Excel"
+                                />
+                                <button
+                                    className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                                >
+                                    <Upload size={18} /> <span className="hidden md:inline">Nhập Excel</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
                     <button
                         onClick={handleOpenModal}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
@@ -302,8 +478,8 @@ export const PatientCardModule = () => {
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 bg-slate-50/50">
-                    <div className="relative flex-1 max-w-full md:max-w-sm">
+                <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 bg-slate-50/50 flex-wrap">
+                    <div className="relative flex-1 min-w-[200px]">
                         <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
                         <input
                             type="text"
@@ -313,7 +489,43 @@ export const PatientCardModule = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-500 overflow-x-auto whitespace-nowrap">
+
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <select
+                            className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            value={filterType}
+                            onChange={(e) => setFilterType(e.target.value as FilterType)}
+                        >
+                            <option value="all">Tất cả thời gian</option>
+                            <option value="today">Hôm nay</option>
+                            <option value="yesterday">Hôm qua</option>
+                            <option value="2_days_ago">2 ngày trước</option>
+                            <option value="3_days_ago">3 ngày trước</option>
+                            <option value="custom">Từ ngày - đến ngày</option>
+                        </select>
+
+                        {filterType === 'custom' && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-5 duration-200">
+                                <input
+                                    type="date"
+                                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    value={customDateFrom}
+                                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                                    title="Từ ngày"
+                                />
+                                <span className="text-slate-400">-</span>
+                                <input
+                                    type="date"
+                                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    value={customDateTo}
+                                    onChange={(e) => setCustomDateTo(e.target.value)}
+                                    title="Đến ngày"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm text-slate-500 overflow-x-auto whitespace-nowrap ml-auto">
                         <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Đang mượn</div>
                         <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500"></span> Đã trả</div>
                     </div>
@@ -799,7 +1011,7 @@ export const PatientCardModule = () => {
                                                         <label className="text-sm font-medium text-slate-700">Ngày giờ bàn giao tiền</label>
                                                         <input
                                                             type="datetime-local"
-                                                            disabled={!isAdmin}
+                                                            disabled={!can_edit}
                                                             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
                                                             value={formData.ngay_ban_giao_tien_muon || ''}
                                                             onChange={e => setFormData({ ...formData, ngay_ban_giao_tien_muon: e.target.value })}
@@ -875,7 +1087,7 @@ export const PatientCardModule = () => {
                                 />
                             </div>
 
-                            {isAdmin && (
+                            {can_edit && (
                                 <div className="space-y-4 pt-4 border-t border-slate-100">
                                     <h3 className="text-sm font-bold text-slate-800 flex items-center justify-between">
                                         <span className="flex items-center gap-2"><CreditCard size={16} /> Bàn giao tiền trả thẻ</span>
@@ -883,7 +1095,7 @@ export const PatientCardModule = () => {
                                             <label className="text-xs font-medium text-slate-700">Trạng thái:</label>
                                             <select
                                                 className="text-xs border border-slate-200 rounded px-2 py-1"
-                                                // If admin is editing return info, allow changing status
+                                                // If can_edit, allow changing status
                                                 onChange={e => setReturnData({ ...returnData, trang_thai_tien_tra: e.target.value })}
                                                 defaultValue="Chưa bàn giao"
                                             >

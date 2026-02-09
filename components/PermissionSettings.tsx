@@ -9,7 +9,8 @@ export const PermissionSettings = () => {
     const [saving, setSaving] = useState(false);
 
     // Define roles and modules
-    const roles = ['manager', 'staff']; // Admin has full access, usually hidden or read-only
+    // Updated to match actual DB roles: 'user' instead of 'staff'
+    const roles = ['manager', 'user']; // Admin has full access, usually hidden or read-only
 
     interface ModuleDef {
         key: string;
@@ -114,7 +115,7 @@ export const PermissionSettings = () => {
                                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                                 }`}
                         >
-                            {role === 'manager' ? 'Quản lý (Manager)' : 'Nhân viên (Staff)'}
+                            {role === 'manager' ? 'Quản lý (Manager)' : 'Nhân viên (User/Staff)'}
                         </button>
                     ))}
                 </div>

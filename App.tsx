@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Home,
   Users,
@@ -46,8 +46,10 @@ import { ScheduleModule } from './components/ScheduleModule';
 import { SalaryModule } from './components/SalaryModule';
 import { FamilyModule } from './components/FamilyModule';
 import { PartyModule } from './components/PartyModule';
+
 import { WorkHistoryModule } from './components/WorkHistoryModule';
 import { TrainingHistoryModule } from './components/TrainingHistoryModule';
+import { usePermissions } from './hooks/usePermissions';
 import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
 import { User as AuthUser, getCurrentUser } from './services/authService';
@@ -581,6 +583,9 @@ const PersonnelList = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // Added searchTerm state
 
+  // Permissions
+  const { can_add, can_edit, can_delete } = usePermissions('p-list');
+
   // View Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [viewData, setViewData] = useState<{
@@ -598,6 +603,7 @@ const PersonnelList = () => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
   const [bulkStatus, setBulkStatus] = useState<string>('');
+
   const [bulkObject, setBulkObject] = useState<string>('');
 
   // Form State
@@ -943,7 +949,7 @@ const PersonnelList = () => {
           <div className="flex gap-2 ml-auto">
             {/* Import Buttons */}
             <div className="flex gap-2 mr-4">
-              {selectedIds.size > 0 && (
+              {can_edit && selectedIds.size > 0 && (
                 <button
                   onClick={() => setIsBulkUpdateModalOpen(true)}
                   className="px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-2 animate-fade-in"
@@ -952,36 +958,42 @@ const PersonnelList = () => {
                 </button>
               )}
 
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                className="hidden"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-              />
-              <button
-                onClick={handleDownloadTemplate}
-                className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2"
-              >
-                <FileText size={16} /> Tải mẫu
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2"
-              >
-                <FileText size={16} /> Import Excel
-              </button>
+              {can_add && (
+                <>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                  />
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2"
+                  >
+                    <FileText size={16} /> Tải mẫu
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2"
+                  >
+                    <FileText size={16} /> Import Excel
+                  </button>
+                </>
+              )}
             </div>
 
-            <button
-              onClick={() => {
-                setFormData({ trang_thai: 'Đang làm việc' });
-                setIsModalOpen(true);
-              }}
-              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Users size={16} /> Thêm mới
-            </button>
+            {can_add && (
+              <button
+                onClick={() => {
+                  setFormData({ trang_thai: 'Đang làm việc' });
+                  setIsModalOpen(true);
+                }}
+                className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+              >
+                <Users size={16} /> Thêm mới
+              </button>
+            )}
           </div>
         </div>
 
@@ -1075,22 +1087,26 @@ const PersonnelList = () => {
                             <Eye size={14} />
                             <span>Xem</span>
                           </button>
-                          <button
-                            onClick={() => handleEdit(employee)}
-                            className="flex items-center gap-1 px-2 py-1 text-orange-600 hover:bg-orange-50 rounded transition-colors"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit size={14} />
-                            <span>Sửa</span>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(employee.id)}
-                            className="flex items-center gap-1 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                            title="Xóa nhân viên"
-                          >
-                            <Trash2 size={14} />
-                            <span>Xóa</span>
-                          </button>
+                          {can_edit && (
+                            <button
+                              onClick={() => handleEdit(employee)}
+                              className="flex items-center gap-1 px-2 py-1 text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit size={14} />
+                              <span>Sửa</span>
+                            </button>
+                          )}
+                          {can_delete && (
+                            <button
+                              onClick={() => handleDelete(employee.id)}
+                              className="flex items-center gap-1 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Xóa nhân viên"
+                            >
+                              <Trash2 size={14} />
+                              <span>Xóa</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -2013,3 +2029,4 @@ function App() {
 }
 
 export default App;
+
