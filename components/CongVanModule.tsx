@@ -56,19 +56,100 @@ export const CongVanModule = () => {
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
 
         setUploading(true);
         try {
-            const publicUrl = await uploadCongVanFile(file);
-            setFormData(prev => ({ ...prev, file_dinh_kem: publicUrl }));
+            const newUploadedFiles = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const publicUrl = await uploadCongVanFile(file);
+                newUploadedFiles.push({ name: file.name, url: publicUrl });
+            }
+
+            // Get existing files
+            let existingFiles: any[] = [];
+            try {
+                if (formData.file_dinh_kem) {
+                    if (formData.file_dinh_kem.startsWith('[')) {
+                        existingFiles = JSON.parse(formData.file_dinh_kem);
+                    } else {
+                        // Legacy single file support
+                        existingFiles = [{ name: 'File đính kèm', url: formData.file_dinh_kem }];
+                    }
+                }
+            } catch (e) {
+                // Fallback for plain text that isn't JSON
+                if (formData.file_dinh_kem) {
+                    existingFiles = [{ name: 'File đính kèm', url: formData.file_dinh_kem }];
+                }
+            }
+
+            const updatedFiles = [...existingFiles, ...newUploadedFiles];
+            setFormData(prev => ({ ...prev, file_dinh_kem: JSON.stringify(updatedFiles) }));
+
         } catch (error) {
             console.error("Upload failed:", error);
             alert("Upload file thất bại!");
         } finally {
             setUploading(false);
         }
+    };
+
+    const removeFile = (index: number) => {
+        try {
+            let files: any[] = [];
+            if (formData.file_dinh_kem) {
+                if (formData.file_dinh_kem.startsWith('[')) {
+                    files = JSON.parse(formData.file_dinh_kem);
+                } else {
+                    files = [{ name: 'File đính kèm', url: formData.file_dinh_kem }];
+                }
+            }
+
+            files.splice(index, 1);
+            setFormData(prev => ({
+                ...prev,
+                file_dinh_kem: files.length > 0 ? JSON.stringify(files) : null
+            }));
+        } catch (e) {
+            console.error("Remove file error", e);
+            setFormData(prev => ({ ...prev, file_dinh_kem: null }));
+        }
+    };
+
+    // Helper to render file list
+    const renderFiles = (fileData: string | null) => {
+        if (!fileData) return <span className="text-slate-300">-</span>;
+
+        let files: { name: string, url: string }[] = [];
+        try {
+            if (fileData.startsWith('[')) {
+                files = JSON.parse(fileData);
+            } else {
+                files = [{ name: 'File đính kèm', url: fileData }];
+            }
+        } catch (e) {
+            files = [{ name: 'File đính kèm', url: fileData }];
+        }
+
+        return (
+            <div className="flex flex-col gap-1">
+                {files.map((f, idx) => (
+                    <a
+                        key={idx}
+                        href={f.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-600 hover:underline text-xs"
+                        title={f.name}
+                    >
+                        <Paperclip size={12} /> <span className="truncate max-w-[150px]">{f.name}</span>
+                    </a>
+                ))}
+            </div>
+        );
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -224,14 +305,9 @@ export const CongVanModule = () => {
                             <div className="flex items-center justify-between pt-2 border-t border-slate-50">
                                 <span className="text-xs text-slate-500">{doc.co_quan_ban_hanh}</span>
                                 {doc.file_dinh_kem && (
-                                    <a
-                                        href={doc.file_dinh_kem}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex items-center gap-1 text-xs text-blue-600 font-medium hover:underline"
-                                    >
-                                        <Paperclip size={12} /> Xem file
-                                    </a>
+                                    <div className="mt-2 pt-2 border-t border-slate-50">
+                                        {renderFiles(doc.file_dinh_kem)}
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -285,19 +361,7 @@ export const CongVanModule = () => {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            {doc.file_dinh_kem ? (
-                                                <a
-                                                    href={doc.file_dinh_kem}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                                    title="Xem file đính kèm"
-                                                >
-                                                    <Paperclip size={16} />
-                                                </a>
-                                            ) : (
-                                                <span className="text-slate-300">-</span>
-                                            )}
+                                            {renderFiles(doc.file_dinh_kem)}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-2">
@@ -451,18 +515,47 @@ export const CongVanModule = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1">File đính kèm</label>
-                                    <div className="flex gap-2">
+                                    <div className="flex gap-2 mb-2">
                                         <input
                                             type="file"
+                                            multiple
                                             onChange={handleFileUpload}
                                             className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                         />
                                     </div>
                                     {uploading && <p className="text-xs text-blue-600 mt-1">Đang tải lên...</p>}
+
+                                    {/* File List in Modal */}
                                     {formData.file_dinh_kem && (
-                                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                                            <Paperclip size={12} /> Đã có file đính kèm
-                                        </p>
+                                        <div className="space-y-1 mt-2">
+                                            {(() => {
+                                                let files: { name: string, url: string }[] = [];
+                                                try {
+                                                    if (formData.file_dinh_kem.startsWith('[')) {
+                                                        files = JSON.parse(formData.file_dinh_kem);
+                                                    } else {
+                                                        files = [{ name: 'File đính kèm', url: formData.file_dinh_kem }];
+                                                    }
+                                                } catch (e) {
+                                                    files = [{ name: 'File đính kèm', url: formData.file_dinh_kem }];
+                                                }
+
+                                                return files.map((f, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between text-xs bg-slate-50 p-2 rounded">
+                                                        <a href={f.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:underline truncate">
+                                                            <Paperclip size={12} /> {f.name}
+                                                        </a>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeFile(idx)}
+                                                            className="text-red-500 hover:text-red-700 p-1"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                ));
+                                            })()}
+                                        </div>
                                     )}
                                 </div>
                             </div>

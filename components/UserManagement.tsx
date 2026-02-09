@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { SystemUser } from '../types';
 import { getUsers, createUser, updateUser, deleteUser } from '../services/userService';
-import { Plus, Edit, Trash2, X, Save, Shield, User, Key } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Save, Shield, User, Key, Download, Upload } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 export const UserManagement = () => {
     const [users, setUsers] = useState<SystemUser[]>([]);
@@ -77,16 +78,111 @@ export const UserManagement = () => {
         }
     };
 
+    const handleExportValues = () => {
+        const dataToExport = users.map(user => ({
+            'Họ và tên': user.full_name,
+            'Tên đăng nhập': user.username,
+            'Vai trò': user.role === 'admin' ? 'Quản trị viên' : user.role === 'manager' ? 'Quản lý' : 'Nhân viên',
+            'Ngày tạo': new Date(user.created_at || '').toLocaleDateString('vi-VN')
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Người dùng");
+        XLSX.writeFile(wb, "Danh_sach_nguoi_dung.xlsx");
+    };
+
+    const handleImportValues = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const bstr = evt.target?.result;
+            const wb = XLSX.read(bstr, { type: 'binary' });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const data = XLSX.utils.sheet_to_json(ws);
+
+            if (data.length === 0) {
+                alert("File không có dữ liệu!");
+                return;
+            }
+
+            if (!window.confirm(`Tìm thấy ${data.length} dòng dữ liệu. Bạn có muốn nhập không?`)) return;
+
+            setLoading(true);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const row of data as any[]) {
+                // Expected columns: FullName, Username, Password, Role
+                // Map from Vietnamese headers if used in Export, or simple keys
+                const fullName = row['Họ và tên'] || row['Full Name'] || row['full_name'];
+                const username = row['Tên đăng nhập'] || row['Username'] || row['username'];
+                const password = row['Mật khẩu'] || row['Password'] || row['password'] || '123456'; // Default password
+                const roleRaw = row['Vai trò'] || row['Role'] || row['role'] || 'user';
+
+                let role = 'user';
+                if (roleRaw === 'Quản trị viên' || roleRaw === 'admin') role = 'admin';
+                else if (roleRaw === 'Quản lý' || roleRaw === 'manager') role = 'manager';
+
+                if (fullName && username) {
+                    try {
+                        await createUser({
+                            full_name: fullName,
+                            username: username,
+                            password: password.toString(),
+                            role: role as any
+                        });
+                        successCount++;
+                    } catch (err) {
+                        console.error(`Failed to import user ${username}`, err);
+                        failCount++;
+                    }
+                }
+            }
+
+            alert(`Nhập hoàn tất! Thành công: ${successCount}, Thất bại: ${failCount}`);
+            fetchUsers();
+            // Reset input
+            e.target.value = '';
+        };
+        reader.readAsBinaryString(file);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-slate-800">Danh sách người dùng</h2>
-                <button
-                    onClick={handleCreate}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
-                >
-                    <Plus size={16} /> Thêm người dùng
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleExportValues}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-2"
+                    >
+                        <Download size={16} /> Xuất Excel
+                    </button>
+                    <div className="relative">
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls"
+                            onChange={handleImportValues}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            title="Nhập từ Excel"
+                        />
+                        <button
+                            className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 flex items-center gap-2"
+                        >
+                            <Upload size={16} /> Nhập Excel
+                        </button>
+                    </div>
+                    <button
+                        onClick={handleCreate}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                    >
+                        <Plus size={16} /> Thêm người dùng
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

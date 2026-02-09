@@ -64,6 +64,8 @@ const formatDateVN = (dateStr: string | undefined | null) => {
 import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, getAllTraining, uploadPartyCardImage, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { LeaveModule } from './components/LeaveModule';
 import { OverviewModule } from './components/OverviewModule';
 import { WorkScheduleModule } from './components/WorkScheduleModule';
@@ -1694,6 +1696,8 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -1944,11 +1948,17 @@ function App() {
                       </p>
                     </div>
                     <div className="py-1">
-                      <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                      <button
+                        onClick={() => { setIsProfileModalOpen(true); setUserMenuOpen(false); }}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
                         <User size={16} /> Hồ sơ cá nhân
                       </button>
-                      <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                        <Settings size={16} /> Cài đặt tài khoản
+                      <button
+                        onClick={() => { setIsChangePasswordModalOpen(true); setUserMenuOpen(false); }}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <Settings size={16} /> Đổi mật khẩu
                       </button>
                     </div>
                     <div className="h-px bg-slate-100 my-1"></div>
@@ -1995,6 +2005,9 @@ function App() {
           <Assistant />
         </div>
       </div>
+      {/* Modals */}
+      {isProfileModalOpen && <UserProfileModal onClose={() => setIsProfileModalOpen(false)} />}
+      {isChangePasswordModalOpen && <ChangePasswordModal onClose={() => setIsChangePasswordModalOpen(false)} />}
     </HashRouter>
   );
 }
