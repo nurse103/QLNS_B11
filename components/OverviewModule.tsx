@@ -611,7 +611,7 @@ export const OverviewModule = () => {
                             <thead className="bg-slate-50 text-slate-500 font-medium">
                                 <tr>
                                     <th className="px-4 py-3 w-24">Ngày</th>
-                                    <th className="px-4 py-3">Bác sỹ</th>
+                                    <th className="px-4 py-3 w-40">Bác sỹ</th>
                                     <th className="px-4 py-3">Điều dưỡng</th>
                                 </tr>
                             </thead>
@@ -623,7 +623,7 @@ export const OverviewModule = () => {
                                                 {new Date(item.ngay_truc).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                                             </td>
                                             <td className={`px-4 py-3 font-medium ${isWeekend(item.ngay_truc) ? 'text-red-600' : 'text-green-700'}`}>{item.bac_sy}</td>
-                                            <td className={`px-4 py-3 max-w-[150px] truncate ${isWeekend(item.ngay_truc) ? 'text-red-600 font-medium' : 'text-blue-700'}`} title={item.dieu_duong || ''}>{item.dieu_duong}</td>
+                                            <td className={`px-4 py-3 ${isWeekend(item.ngay_truc) ? 'text-red-600 font-medium' : 'text-blue-700'}`} title={item.dieu_duong || ''}>{item.dieu_duong}</td>
                                         </tr>
                                     ))
                                 ) : (
