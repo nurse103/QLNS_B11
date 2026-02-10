@@ -815,18 +815,21 @@ export const PatientCardModule = () => {
             {/* Borrow Modal */}
             {
                 isModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-                            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-                                <h2 className="text-xl font-bold text-slate-800">
-                                    {isViewMode ? 'Chi tiết mượn thẻ' : isEditMode ? 'Cập nhật thông tin mượn' : 'Đăng ký mượn thẻ'}
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm md:p-4 animate-in fade-in duration-200">
+                        <div className="bg-white w-full max-w-2xl shadow-xl overflow-hidden flex flex-col h-full md:h-auto md:max-h-[90vh] md:rounded-xl animate-in zoom-in-95 duration-200">
+                            <div className="flex items-center gap-3 p-4 md:p-6 border-b border-slate-100 bg-[#15803d] md:bg-white text-white md:text-slate-800 shrink-0">
+                                <button onClick={() => setIsModalOpen(false)} className="md:hidden text-white p-1 rounded-full hover:bg-white/10 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                                </button>
+                                <h2 className="text-lg md:text-xl font-bold uppercase flex-1 text-center md:text-left">
+                                    {isViewMode ? 'Chi tiết mượn thẻ' : isEditMode ? 'Cập nhật thông tin mượn' : 'CHO MƯỢN THẺ'}
                                 </h2>
-                                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
+                                <button onClick={() => setIsModalOpen(false)} className="hidden md:block text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
                                     <X size={24} />
                                 </button>
                             </div>
 
-                            <div className="p-6">
+                            <div className="p-4 md:p-6 overflow-y-auto flex-1">
                                 {warning && !isViewMode && !isEditMode && (
                                     <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3 text-yellow-800">
                                         <AlertCircle className="shrink-0 mt-0.5" size={18} />
@@ -933,20 +936,53 @@ export const PatientCardModule = () => {
                                 ) : (
                                     /* --- HOST EDIT/CREATE FORM --- */
                                     <form onSubmit={handleSubmit} className="space-y-6">
-                                        <div className="grid grid-cols-1 gap-6">
+                                        <div className="grid grid-cols-1 gap-6 pb-20 md:pb-0">
                                             <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">Ngày mượn <span className="text-red-500">*</span></label>
+                                                <label className="block text-sm font-medium text-slate-700">Họ tên bệnh nhân <span className="text-red-500">*</span></label>
                                                 <input
-                                                    type="datetime-local"
+                                                    type="text"
                                                     required
                                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={formData.ngay_muon || ''}
-                                                    onChange={e => setFormData({ ...formData, ngay_muon: e.target.value })}
+                                                    value={formData.ho_ten_benh_nhan || ''}
+                                                    onChange={e => setFormData({ ...formData, ho_ten_benh_nhan: e.target.value })}
+                                                    onBlur={(e) => !isEditMode && checkDuplicate(e.target.value)}
+                                                    placeholder="Nhập họ tên..."
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">Số thẻ <span className="text-red-500">*</span></label>
+                                                <label className="block text-sm font-medium text-slate-700">Tuổi hoặc năm sinh</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    value={formData.nam_sinh || ''}
+                                                    onChange={e => setFormData({ ...formData, nam_sinh: e.target.value })}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">Họ và tên người chăm <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    value={formData.ho_ten_nguoi_cham || ''}
+                                                    onChange={e => setFormData({ ...formData, ho_ten_nguoi_cham: e.target.value })}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">Số điện người chăm <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="tel"
+                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    value={formData.sdt_nguoi_cham || ''}
+                                                    onChange={e => setFormData({ ...formData, sdt_nguoi_cham: e.target.value })}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">Số thẻ chăm <span className="text-red-500">*</span></label>
                                                 <select
                                                     required
                                                     disabled={isEditMode}
@@ -969,56 +1005,23 @@ export const PatientCardModule = () => {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">Họ tên bệnh nhân <span className="text-red-500">*</span></label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={formData.ho_ten_benh_nhan || ''}
-                                                    onChange={e => setFormData({ ...formData, ho_ten_benh_nhan: e.target.value })}
-                                                    onBlur={(e) => !isEditMode && checkDuplicate(e.target.value)}
-                                                    placeholder="Nhập họ tên..."
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">Năm sinh</label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={formData.nam_sinh || ''}
-                                                    onChange={e => setFormData({ ...formData, nam_sinh: e.target.value })}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">Họ tên người chăm <span className="text-red-500">*</span></label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={formData.ho_ten_nguoi_cham || ''}
-                                                    onChange={e => setFormData({ ...formData, ho_ten_nguoi_cham: e.target.value })}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">SĐT người chăm</label>
-                                                <input
-                                                    type="tel"
-                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={formData.sdt_nguoi_cham || ''}
-                                                    onChange={e => setFormData({ ...formData, sdt_nguoi_cham: e.target.value })}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="block text-sm font-medium text-slate-700">Tiền cược (VNĐ)</label>
+                                                <label className="block text-sm font-medium text-slate-700">Số tiền cược <span className="text-red-500">*</span></label>
                                                 <input
                                                     type="number"
                                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     value={formData.so_tien_cuoc || 500000}
                                                     onChange={e => setFormData({ ...formData, so_tien_cuoc: Number(e.target.value) })}
+                                                />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-medium text-slate-700">Ngày mượn <span className="text-red-500">*</span></label>
+                                                <input
+                                                    type="datetime-local"
+                                                    required
+                                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    value={formData.ngay_muon || ''}
+                                                    onChange={e => setFormData({ ...formData, ngay_muon: e.target.value })}
                                                 />
                                             </div>
 
@@ -1034,7 +1037,7 @@ export const PatientCardModule = () => {
 
                                             {/* Money Handover Fields */}
                                             {(isAdmin || (formData.trang_thai_tien_muon === 'Đã bàn giao')) && (
-                                                <div className="col-span-1 md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                                <div className="col-span-1 border-t border-slate-100 pt-4 mt-2">
                                                     <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
                                                         <span className="flex items-center gap-2"><CreditCard size={16} /> Thông tin bàn giao tiền mượn thẻ</span>
                                                         {isEditMode && isAdmin && (
@@ -1087,19 +1090,19 @@ export const PatientCardModule = () => {
                                             </div>
                                         </div>
 
-                                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                                        <div className="flex justify-between items-center p-4 border-t border-slate-100 bg-white fixed bottom-0 left-0 right-0 md:static md:justify-end md:gap-3 md:bg-transparent">
                                             <button
                                                 type="button"
                                                 onClick={() => setIsModalOpen(false)}
-                                                className="px-5 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 font-medium rounded-lg transition-colors"
+                                                className="px-5 py-2.5 text-slate-600 font-medium md:bg-slate-100 md:hover:bg-slate-200 md:rounded-lg transition-colors hover:text-slate-900"
                                             >
                                                 Hủy bỏ
                                             </button>
                                             <button
                                                 type="submit"
-                                                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm shadow-blue-200 transition-colors flex items-center gap-2"
+                                                className="px-5 py-2.5 text-[#15803d] font-bold text-lg md:text-white md:font-medium md:text-base md:bg-blue-600 md:hover:bg-blue-700 md:rounded-lg md:shadow-sm transition-colors"
                                             >
-                                                <Save size={18} /> {isEditMode ? 'Cập nhật' : 'Đăng ký'}
+                                                {isEditMode ? 'Cập nhật' : 'Lưu'}
                                             </button>
                                         </div>
                                     </form>
