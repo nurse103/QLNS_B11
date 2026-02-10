@@ -37,7 +37,8 @@ import {
   Eye,
   Edit,
   Cake,
-  CreditCard
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { MenuItem } from './types';
@@ -595,6 +596,7 @@ function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -809,6 +811,14 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsAssistantOpen(true)}
+                className="hidden md:flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all hover:scale-105"
+              >
+                <Sparkles size={16} className="text-yellow-300" />
+                <span className="text-sm font-medium">Hỏi trợ lý AI</span>
+              </button>
+
               <button className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-600">
                 <Bell size={20} />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
@@ -899,7 +909,7 @@ function App() {
           </main>
 
           {/* AI Assistant FAB */}
-          <Assistant />
+          <Assistant isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
         </div>
       </div>
       {/* Modals */}

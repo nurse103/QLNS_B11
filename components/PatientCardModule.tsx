@@ -936,7 +936,7 @@ export const PatientCardModule = () => {
                                 ) : (
                                     /* --- HOST EDIT/CREATE FORM --- */
                                     <form onSubmit={handleSubmit} className="space-y-6">
-                                        <div className="grid grid-cols-1 gap-6 pb-20 md:pb-0">
+                                        <div className="flex flex-col gap-5 pb-24 md:pb-0">
                                             <div className="space-y-2">
                                                 <label className="block text-sm font-medium text-slate-700">Họ tên bệnh nhân <span className="text-red-500">*</span></label>
                                                 <input
@@ -1037,7 +1037,7 @@ export const PatientCardModule = () => {
 
                                             {/* Money Handover Fields */}
                                             {(isAdmin || (formData.trang_thai_tien_muon === 'Đã bàn giao')) && (
-                                                <div className="col-span-1 border-t border-slate-100 pt-4 mt-2">
+                                                <div className="border-t border-slate-100 pt-4 mt-2">
                                                     <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center justify-between">
                                                         <span className="flex items-center gap-2"><CreditCard size={16} /> Thông tin bàn giao tiền mượn thẻ</span>
                                                         {isEditMode && isAdmin && (
@@ -1054,7 +1054,7 @@ export const PatientCardModule = () => {
                                                             </div>
                                                         )}
                                                     </h3>
-                                                    <div className="grid grid-cols-1 gap-6">
+                                                    <div className="flex flex-col gap-5">
                                                         <div className="space-y-2">
                                                             <label className="block text-sm font-medium text-slate-700">Người nhận bàn giao tiền</label>
                                                             <input
@@ -1080,7 +1080,7 @@ export const PatientCardModule = () => {
                                                 </div>
                                             )}
 
-                                            <div className="col-span-2 space-y-2">
+                                            <div className="space-y-2">
                                                 <label className="block text-sm font-medium text-slate-700">Ghi chú</label>
                                                 <textarea
                                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
