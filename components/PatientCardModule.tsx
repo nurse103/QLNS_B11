@@ -703,15 +703,24 @@ export const PatientCardModule = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(record)}
-                                                        className="p-1.5 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
-                                                        title="Sửa thông tin"
+                                                        disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
+                                                        className={`p-1.5 rounded transition-colors ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
+                                                            ? 'text-slate-500 hover:text-orange-600 hover:bg-orange-50'
+                                                            : 'text-slate-300 cursor-not-allowed'
+                                                            }`}
+                                                        title={isAdmin || record.nguoi_cho_muon === currentUser?.full_name ? "Sửa thông tin" : "Bạn chỉ được sửa bản ghi do mình tạo"}
                                                     >
                                                         <Edit size={16} />
                                                     </button>
                                                     {record.trang_thai === 'Đang mượn thẻ' && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(record)}
-                                                            className="px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-medium transition-colors whitespace-nowrap"
+                                                            disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
+                                                            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
+                                                                ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                                                                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                                }`}
+                                                            title={isAdmin || record.nguoi_cho_muon === currentUser?.full_name ? "Trả thẻ" : "Bạn chỉ được trả thẻ cho bản ghi do mình tạo"}
                                                         >
                                                             Trả thẻ
                                                         </button>
@@ -784,7 +793,11 @@ export const PatientCardModule = () => {
                                         </button>
                                         <button
                                             onClick={() => handleEdit(record)}
-                                            className="flex-1 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-xs font-medium transition-colors border border-blue-100"
+                                            disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
+                                            className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
+                                                ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100'
+                                                : 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed'
+                                                }`}
                                         >
                                             Sửa
                                         </button>
@@ -799,7 +812,11 @@ export const PatientCardModule = () => {
                                         {record.trang_thai === 'Đang mượn thẻ' && (
                                             <button
                                                 onClick={() => handleOpenReturnModal(record)}
-                                                className="flex-1 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-xs font-medium transition-colors shadow-sm"
+                                                disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
+                                                className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors shadow-sm ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
+                                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                                    : 'bg-slate-300 text-white cursor-not-allowed'
+                                                    }`}
                                             >
                                                 Trả
                                             </button>
@@ -898,6 +915,10 @@ export const PatientCardModule = () => {
                                                     <div className="text-lg font-bold text-blue-700 mt-0.5">{formData.so_the}</div>
                                                 </div>
                                                 <div>
+                                                    <div className="text-xs text-slate-500 uppercase font-semibold">Người cho mượn</div>
+                                                    <div className="text-base text-slate-800 mt-0.5">{formData.nguoi_cho_muon || '---'}</div>
+                                                </div>
+                                                <div>
                                                     <div className="text-xs text-slate-500 uppercase font-semibold">Ngày mượn</div>
                                                     <div className="text-base text-slate-800 mt-0.5">{formatDate(formData.ngay_muon)}</div>
                                                 </div>
@@ -908,7 +929,7 @@ export const PatientCardModule = () => {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-xs text-slate-500 uppercase font-semibold">Trạng thái tiền</div>
+                                                    <div className="text-xs text-slate-500 uppercase font-semibold">Trạng thái tiền cho mượn</div>
                                                     <div className="mt-1">{renderMoneyStatusBadge(formData.trang_thai_tien_muon)}</div>
                                                     {formData.trang_thai_tien_muon === 'Đã bàn giao' && (
                                                         <div className="text-xs text-slate-500 mt-1">
@@ -916,6 +937,31 @@ export const PatientCardModule = () => {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* Return Info - Only if returned */}
+                                                {(formData.trang_thai === 'Đã trả thẻ') && (
+                                                    <>
+                                                        <div className="col-span-1 md:col-span-2 border-t border-blue-200 mt-2 mb-2"></div>
+                                                        <div>
+                                                            <div className="text-xs text-slate-500 uppercase font-semibold">Ngày trả thẻ</div>
+                                                            <div className="text-base text-slate-800 mt-0.5">{formatDate(formData.ngay_tra)}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs text-slate-500 uppercase font-semibold">Người nhận lại thẻ</div>
+                                                            <div className="text-base text-slate-800 mt-0.5">{formData.nguoi_nhan_lai_the || '---'}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-xs text-slate-500 uppercase font-semibold">Trạng thái tiền trả thẻ</div>
+                                                            <div className="mt-1">{renderMoneyStatusBadge(formData.trang_thai_tien_tra)}</div>
+                                                            {formData.trang_thai_tien_tra === 'Đã bàn giao' && (
+                                                                <div className="text-xs text-slate-500 mt-1">
+                                                                    {formData.nguoi_ban_giao_tien_tra} - {formatDate(formData.ngay_ban_giao_tien_tra)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
+
                                                 <div className="col-span-1 md:col-span-2">
                                                     <div className="text-xs text-slate-500 uppercase font-semibold">Ghi chú</div>
                                                     <div className="text-sm text-slate-700 mt-1 italic">{formData.ghi_chu || 'Không có ghi chú'}</div>

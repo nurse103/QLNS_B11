@@ -1,51 +1,67 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini AI Client
-// Note: In a real production app, ensure your API key is secure.
-const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.warn("Gemini API Key is missing!");
-    return null;
-  }
-  return new GoogleGenAI({ apiKey });
-};
+/**
+ * Khởi tạo Gemini – FREE PLAN
+ */
+const genAI = new GoogleGenerativeAI(
+  import.meta.env.VITE_GEMINI_API_KEY
+);
 
-export const generateHRResponse = async (
-  prompt: string,
-  onStream: (text: string) => void
-): Promise<string> => {
+// Sử dụng model 1.5 Flash vì ổn định hơn 2.0 Flash (preview)
+// Nếu muốn dùng 2.0, đổi thành "gemini-2.0-flash-exp" hoặc tương tự nếu có quyền truy cập
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+});
+
+/**
+ * Sinh câu trả lời AI (HR / Điều dưỡng)
+ * @param question Câu hỏi người dùng
+ * @param context Dữ liệu nội bộ (đã lọc từ Supabase)
+ */
+export async function generateAIResponse(
+  question: string,
+  context: string = ""
+): Promise<string> {
   try {
-    const modelId = 'gemini-3-flash-preview';
+    const prompt = `
+Bạn là **Trợ lý AI nội bộ bệnh viện**.
 
-    const ai = getAiClient();
-    if (!ai) return "Chưa cấu hình API Key. Vui lòng liên hệ Admin.";
+NGUYÊN TẮC BẮT BUỘC:
+- Chỉ sử dụng thông tin trong "DỮ LIỆU NỘI BỘ" được cung cấp bên dưới.
+- KHÔNG suy đoán, KHÔNG bịa đặt thông tin.
+- Nếu không có thông tin trong dữ liệu → trả lời: "Không tìm thấy dữ liệu phù hợp trong hệ thống."
+- Trả lời ngắn gọn, rõ ràng, ưu tiên dạng gạch đầu dòng.
+- Ngôn ngữ: Tiếng Việt, văn phong chuyên môn y tế – hành chính.
 
-    // System instruction to behave like an HR expert
-    const chat = ai.chats.create({
-      model: modelId,
-      config: {
-        systemInstruction: `Bạn là một trợ lý ảo chuyên nghiệp về Quản trị Nhân sự (HR) cho một tổ chức tại Việt Nam. 
-        Nhiệm vụ của bạn là hỗ trợ soạn thảo văn bản, tư vấn luật lao động, giải đáp thắc mắc về lương thưởng, và phân tích dữ liệu nhân sự.
-        Hãy trả lời ngắn gọn, súc tích, chuyên nghiệp và lịch sự bằng tiếng Việt.`,
-        temperature: 0.7,
+=== DỮ LIỆU NỘI BỘ ===
+${context || "Không có dữ liệu"}
+
+=== CÂU HỎI ===
+${question}
+`;
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.8,
+        maxOutputTokens: 1000,
       },
     });
 
-    const result = await chat.sendMessageStream({ message: prompt });
+    return result.response.text().trim();
+  } catch (error: any) {
+    console.error("Gemini FREE error:", error);
 
-    let fullText = '';
-    for await (const chunk of result) {
-      const c = chunk as GenerateContentResponse;
-      if (c.text) {
-        fullText += c.text;
-        onStream(fullText);
-      }
+    if (error?.message?.includes("quota")) {
+      return "⚠️ AI đã vượt giới hạn miễn phí trong ngày. Vui lòng thử lại sau.";
     }
-    return fullText;
 
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Xin lỗi, hiện tại tôi không thể kết nối với hệ thống. Vui lòng kiểm tra lại cấu hình API Key.";
+    return "⚠️ Không thể xử lý yêu cầu AI lúc này. Vui lòng thử lại.";
   }
-};
+}

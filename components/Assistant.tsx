@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Sparkles } from 'lucide-react';
-import { generateHRResponse } from '../services/geminiService';
-import { ChatMessage } from '../types';
+import { generateAIResponse } from '../services/geminiService';
+import { ChatMessage, CardRecord } from '../types';
+import { getPersonnel, Employee } from '../services/personnelService';
+import { getCardRecords } from '../services/cardService';
 
 interface AssistantProps {
   isOpen: boolean;
@@ -11,11 +13,12 @@ interface AssistantProps {
 export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [contextData, setContextData] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'model',
-      text: 'Xin chào! Tôi là Trợ lý HR ảo. Tôi có thể giúp gì cho bạn hôm nay? (Ví dụ: Soạn thảo quyết định khen thưởng, tính lương gross-net...)',
+      text: 'Xin chào! Tôi là Trợ lý HR ảo. Tôi có thể giúp gì cho bạn hôm nay? (Ví dụ: Tra cứu nhân viên, kiểm tra thẻ mượn...)',
       timestamp: new Date()
     }
   ]);
@@ -28,6 +31,41 @@ export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  // Fetch Data for Context
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!isOpen && contextData) return; // Don't re-fetch if closed and already have data
+
+      try {
+        const [personnel, cards] = await Promise.all([
+          getPersonnel(),
+          getCardRecords()
+        ]);
+
+        let context = "DANH SÁCH NHÂN SỰ:\n";
+        personnel.forEach(p => {
+          context += `- ${p.ho_va_ten} (ID: ${p.id}), Chức vụ: ${p.chuc_vu || 'N/A'}, Cấp bậc: ${p.cap_bac || 'N/A'}, SĐT: ${p.dien_thoai || 'N/A'}, Trạng thái: ${p.trang_thai || 'N/A'}`;
+          if (p.ngay_vao_dang) context += `, Đảng viên (vào đảng: ${p.ngay_vao_dang})`;
+          context += `\n`;
+        });
+
+        context += "\nDANH SÁCH MƯỢN THẺ:\n";
+        cards.forEach(c => {
+          context += `- Thẻ ${c.so_the}: BN ${c.ho_ten_benh_nhan}, Người chăm: ${c.ho_ten_nguoi_cham} (SĐT: ${c.sdt_nguoi_cham}), Trạng thái: ${c.trang_thai}, Tiền cược: ${c.so_tien_cuoc}\n`;
+        });
+
+        setContextData(context);
+        console.log("Assistant: Context loaded", context.length, "chars");
+      } catch (error) {
+        console.error("Assistant: Error loading context", error);
+      }
+    };
+
+    if (isOpen) {
+      fetchData();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,11 +92,11 @@ export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
     }]);
 
     try {
-      await generateHRResponse(userMsg.text, (streamText) => {
-        setMessages(prev => prev.map(msg =>
-          msg.id === modelMsgId ? { ...msg, text: streamText } : msg
-        ));
-      });
+      const responseText = await generateAIResponse(userMsg.text, contextData);
+
+      setMessages(prev => prev.map(msg =>
+        msg.id === modelMsgId ? { ...msg, text: responseText } : msg
+      ));
     } catch (err) {
       setMessages(prev => prev.map(msg =>
         msg.id === modelMsgId ? { ...msg, text: 'Có lỗi xảy ra, vui lòng thử lại.' } : msg
