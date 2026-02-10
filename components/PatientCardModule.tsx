@@ -643,7 +643,7 @@ export const PatientCardModule = () => {
                                                 <div className="text-xs text-slate-400 mt-0.5">Người cho mượn: {record.nguoi_cho_muon}</div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="font-medium text-slate-800">{record.ho_ten_benh_nhan}</div>
+                                                <div className={`font-medium ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>{record.ho_ten_benh_nhan}</div>
                                                 <div className="text-xs text-slate-500">NS: {record.nam_sinh}</div>
                                             </td>
                                             <td className="px-4 py-3">
@@ -745,7 +745,7 @@ export const PatientCardModule = () => {
 
                                     {/* Row 1: Name & Birth Year */}
                                     <div className="flex justify-between items-start pt-1">
-                                        <h3 className="font-bold text-slate-800 text-base">{record.ho_ten_benh_nhan}</h3>
+                                        <h3 className={`font-bold text-base ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>{record.ho_ten_benh_nhan}</h3>
                                         <span className="text-sm text-slate-500 font-medium whitespace-nowrap ml-2">
                                             NS: {record.nam_sinh || '---'}
                                         </span>
