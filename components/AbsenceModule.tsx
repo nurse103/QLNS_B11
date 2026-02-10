@@ -315,76 +315,141 @@ export const AbsenceModule = () => {
                 {loading ? (
                     <div className="p-12 text-center text-slate-500">Đang tải dữ liệu...</div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-[#009900] text-white font-medium">
-                                <tr>
-                                    <th className="px-4 py-4 w-12 text-center">
-                                        <button onClick={handleSelectAll} className="hover:text-slate-200">
-                                            {records.length > 0 && selectedIds.size === records.length ? <CheckSquare size={18} /> : <Square size={18} />}
-                                        </button>
-                                    </th>
-                                    <th className="px-6 py-4">Họ và tên</th>
-                                    <th className="px-6 py-4">Loại nghỉ</th>
-                                    <th className="px-6 py-4">Ngày nghỉ</th>
-                                    <th className="px-6 py-4">Ghi chú</th>
-                                    <th className="px-6 py-4 text-right">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {records.length === 0 ? (
+                    <>
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-[#009900] text-white font-medium">
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">
-                                            Không có quân số nghỉ trong ngày này.
-                                        </td>
+                                        <th className="px-4 py-4 w-12 text-center">
+                                            <button onClick={handleSelectAll} className="hover:text-slate-200">
+                                                {records.length > 0 && selectedIds.size === records.length ? <CheckSquare size={18} /> : <Square size={18} />}
+                                            </button>
+                                        </th>
+                                        <th className="px-6 py-4">Họ và tên</th>
+                                        <th className="px-6 py-4">Loại nghỉ</th>
+                                        <th className="px-6 py-4">Ngày nghỉ</th>
+                                        <th className="px-6 py-4">Ghi chú</th>
+                                        <th className="px-6 py-4 text-right">Thao tác</th>
                                     </tr>
-                                ) : records.map((record) => (
-                                    <tr key={record.id} className={`hover:bg-slate-50 transition-colors group ${selectedIds.has(record.id) ? 'bg-blue-50/50' : ''}`}>
-                                        <td className="px-4 py-4 text-center">
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {records.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">
+                                                Không có quân số nghỉ trong ngày này.
+                                            </td>
+                                        </tr>
+                                    ) : records.map((record) => (
+                                        <tr key={record.id} className={`hover:bg-slate-50 transition-colors group ${selectedIds.has(record.id) ? 'bg-blue-50/50' : ''}`}>
+                                            <td className="px-4 py-4 text-center">
+                                                <button
+                                                    onClick={() => toggleSelection(record.id)}
+                                                    className={`transition-colors ${selectedIds.has(record.id) ? 'text-blue-600' : 'text-slate-300 hover:text-slate-400'}`}
+                                                >
+                                                    {selectedIds.has(record.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-slate-900">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                                        {record.ho_va_ten?.charAt(0)}
+                                                    </div>
+                                                    {record.ho_va_ten}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${record.loai_nghi === 'Nghỉ trực' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                    record.loai_nghi === 'Nghỉ ốm' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                        'bg-blue-50 text-blue-700 border-blue-100'
+                                                    }`}>
+                                                    {record.loai_nghi}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600">
+                                                {new Date(record.ngay_nghi).toLocaleDateString('vi-VN')}
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600 italic">
+                                                {record.ghi_chu || '---'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleOpenModal(record)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(record.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile View */}
+                        <div className="md:hidden space-y-3 p-4 bg-slate-50">
+                            {records.length === 0 ? (
+                                <div className="text-center text-slate-500 italic py-8">
+                                    Không có quân số nghỉ trong ngày này.
+                                </div>
+                            ) : (
+                                records.map((record) => (
+                                    <div key={record.id} className={`bg-white rounded-lg shadow-sm border border-slate-200 p-4 space-y-3 relative ${selectedIds.has(record.id) ? 'ring-2 ring-blue-500' : ''}`}>
+                                        {/* Selection Checkbox (Absolute) */}
+                                        <div className="absolute top-4 right-4 z-10">
                                             <button
                                                 onClick={() => toggleSelection(record.id)}
-                                                className={`transition-colors ${selectedIds.has(record.id) ? 'text-blue-600' : 'text-slate-300 hover:text-slate-400'}`}
+                                                className={`transition-colors ${selectedIds.has(record.id) ? 'text-blue-600' : 'text-slate-300'}`}
                                             >
-                                                {selectedIds.has(record.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                                                {selectedIds.has(record.id) ? <CheckSquare size={20} /> : <Square size={20} />}
                                             </button>
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-slate-900">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
-                                                    {record.ho_va_ten?.charAt(0)}
-                                                </div>
-                                                {record.ho_va_ten}
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="pr-8">
+                                            <h3 className="font-bold text-slate-800 text-base">{record.ho_va_ten}</h3>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${record.loai_nghi === 'Nghỉ trực' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                    record.loai_nghi === 'Nghỉ ốm' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                        'bg-blue-50 text-blue-700 border-blue-100'
+                                                    }`}>
+                                                    {record.loai_nghi}
+                                                </span>
+                                                <span className="text-xs text-slate-500 flex items-center gap-1 border border-slate-100 px-2 py-0.5 rounded bg-slate-50">
+                                                    <Calendar size={12} />
+                                                    {new Date(record.ngay_nghi).toLocaleDateString('vi-VN')}
+                                                </span>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${record.loai_nghi === 'Nghỉ trực' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                record.loai_nghi === 'Nghỉ ốm' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                    'bg-blue-50 text-blue-700 border-blue-100'
-                                                }`}>
-                                                {record.loai_nghi}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-600">
-                                            {new Date(record.ngay_nghi).toLocaleDateString('vi-VN')}
-                                        </td>
-                                        <td className="px-6 py-4 text-slate-600 italic">
-                                            {record.ghi_chu || '---'}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleOpenModal(record)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button onClick={() => handleDelete(record.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                                    <Trash2 size={16} />
-                                                </button>
+                                        </div>
+
+                                        {/* Notes */}
+                                        {record.ghi_chu && (
+                                            <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded border border-slate-100 italic">
+                                                {record.ghi_chu}
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                        )}
+
+                                        {/* Actions */}
+                                        <div className="pt-3 border-t border-slate-100 flex gap-2">
+                                            <button
+                                                onClick={() => handleOpenModal(record)}
+                                                className="flex-1 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-xs font-medium transition-colors border border-blue-100 flex justify-center items-center gap-1"
+                                            >
+                                                <Edit size={14} /> Sửa
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(record.id)}
+                                                className="flex-1 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-100 flex justify-center items-center gap-1"
+                                            >
+                                                <Trash2 size={14} /> Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </>
                 )}
             </div>
 

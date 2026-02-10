@@ -115,7 +115,7 @@ export const updateCardRecord = async (id: number, updates: Partial<CardRecord>)
     return data as CardRecord;
 };
 
-// Helper: Check if patient is already borrowing a card
+
 export const checkPatientBorrowing = async (patientName: string) => {
     const { data, error } = await supabase
         .from('quan_ly_the_cham')
@@ -128,4 +128,16 @@ export const checkPatientBorrowing = async (patientName: string) => {
         return [];
     }
     return data as CardRecord[];
+};
+
+export const deleteCardRecord = async (id: number) => {
+    const { error } = await supabase
+        .from('quan_ly_the_cham')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting card record:', error);
+        throw error;
+    }
 };
