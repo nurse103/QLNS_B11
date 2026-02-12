@@ -4,7 +4,7 @@ import { getCards, getCardRecords, createCardRecord, updateCardRecord, checkPati
 import { getAuthUser } from '../services/authService';
 import { usePermissions } from '../hooks/usePermissions';
 import { supabase } from '../services/supabaseClient';
-import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, Phone, CreditCard, AlertCircle, Eye, Download, Upload } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, Phone, CreditCard, AlertCircle, Eye, Download, Upload, RotateCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export const PatientCardModule = () => {
@@ -715,10 +715,10 @@ export const PatientCardModule = () => {
                                                     {record.trang_thai === 'Đang mượn thẻ' && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(record)}
-                                                            className="px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap bg-green-50 text-green-700 hover:bg-green-100"
+                                                            className="px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap bg-green-50 text-green-700 hover:bg-green-100 flex items-center gap-1"
                                                             title="Trả thẻ"
                                                         >
-                                                            Trả thẻ
+                                                            <RotateCcw size={14} /> Trả thẻ
                                                         </button>
                                                     )}
                                                 </div>
@@ -808,9 +808,9 @@ export const PatientCardModule = () => {
                                         {record.trang_thai === 'Đang mượn thẻ' && (
                                             <button
                                                 onClick={() => handleOpenReturnModal(record)}
-                                                className="flex-1 py-1.5 rounded text-xs font-medium transition-colors shadow-sm bg-green-600 text-white hover:bg-green-700"
+                                                className="flex-1 py-1.5 rounded text-xs font-medium transition-colors shadow-sm bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-1"
                                             >
-                                                Trả
+                                                <RotateCcw size={14} /> Trả thẻ
                                             </button>
                                         )}
                                     </div>
@@ -982,7 +982,7 @@ export const PatientCardModule = () => {
                                                     required
                                                     className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     value={formData.ho_ten_benh_nhan || ''}
-                                                    onChange={e => setFormData({ ...formData, ho_ten_benh_nhan: e.target.value })}
+                                                    onChange={e => setFormData({ ...formData, ho_ten_benh_nhan: e.target.value.toUpperCase() })}
                                                     onBlur={(e) => !isEditMode && checkDuplicate(e.target.value)}
                                                     placeholder="Nhập họ tên..."
                                                 />
