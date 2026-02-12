@@ -703,24 +703,20 @@ export const PatientCardModule = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(record)}
-                                                        disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
-                                                        className={`p-1.5 rounded transition-colors ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
+                                                        disabled={record.nguoi_cho_muon !== currentUser?.full_name}
+                                                        className={`p-1.5 rounded transition-colors ${record.nguoi_cho_muon === currentUser?.full_name
                                                             ? 'text-slate-500 hover:text-orange-600 hover:bg-orange-50'
                                                             : 'text-slate-300 cursor-not-allowed'
                                                             }`}
-                                                        title={isAdmin || record.nguoi_cho_muon === currentUser?.full_name ? "Sửa thông tin" : "Bạn chỉ được sửa bản ghi do mình tạo"}
+                                                        title={record.nguoi_cho_muon === currentUser?.full_name ? "Sửa thông tin" : "Bạn chỉ được sửa bản ghi do mình tạo"}
                                                     >
                                                         <Edit size={16} />
                                                     </button>
                                                     {record.trang_thai === 'Đang mượn thẻ' && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(record)}
-                                                            disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
-                                                            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
-                                                                ? 'bg-green-50 text-green-700 hover:bg-green-100'
-                                                                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                                                }`}
-                                                            title={isAdmin || record.nguoi_cho_muon === currentUser?.full_name ? "Trả thẻ" : "Bạn chỉ được trả thẻ cho bản ghi do mình tạo"}
+                                                            className="px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap bg-green-50 text-green-700 hover:bg-green-100"
+                                                            title="Trả thẻ"
                                                         >
                                                             Trả thẻ
                                                         </button>
@@ -793,8 +789,8 @@ export const PatientCardModule = () => {
                                         </button>
                                         <button
                                             onClick={() => handleEdit(record)}
-                                            disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
-                                            className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
+                                            disabled={record.nguoi_cho_muon !== currentUser?.full_name}
+                                            className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${record.nguoi_cho_muon === currentUser?.full_name
                                                 ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100'
                                                 : 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed'
                                                 }`}
@@ -812,11 +808,7 @@ export const PatientCardModule = () => {
                                         {record.trang_thai === 'Đang mượn thẻ' && (
                                             <button
                                                 onClick={() => handleOpenReturnModal(record)}
-                                                disabled={!isAdmin && record.nguoi_cho_muon !== currentUser?.full_name}
-                                                className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors shadow-sm ${isAdmin || record.nguoi_cho_muon === currentUser?.full_name
-                                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                                    : 'bg-slate-300 text-white cursor-not-allowed'
-                                                    }`}
+                                                className="flex-1 py-1.5 rounded text-xs font-medium transition-colors shadow-sm bg-green-600 text-white hover:bg-green-700"
                                             >
                                                 Trả
                                             </button>

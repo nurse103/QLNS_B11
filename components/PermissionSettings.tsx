@@ -156,7 +156,6 @@ export const PermissionSettings = () => {
                                                     <Toggle
                                                         checked={perm.can_view}
                                                         onChange={() => handleToggle(perm, 'can_view')}
-                                                        onChange={() => handleToggle(perm, 'can_view')}
                                                         disabled={mod.key === 'dashboard'} // Overview usually always viewable?
                                                     />
                                                 </td>

@@ -1,9 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Sparkles } from 'lucide-react';
-import { generateAIResponse } from '../services/geminiService';
 import { ChatMessage, CardRecord } from '../types';
-import { getPersonnel, Employee } from '../services/personnelService';
-import { getCardRecords } from '../services/cardService';
 
 interface AssistantProps {
   isOpen: boolean;
@@ -13,7 +10,6 @@ interface AssistantProps {
 export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [contextData, setContextData] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
@@ -32,41 +28,6 @@ export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  // Fetch Data for Context
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!isOpen && contextData) return; // Don't re-fetch if closed and already have data
-
-      try {
-        const [personnel, cards] = await Promise.all([
-          getPersonnel(),
-          getCardRecords()
-        ]);
-
-        let context = "DANH SÁCH NHÂN SỰ:\n";
-        personnel.forEach(p => {
-          context += `- ${p.ho_va_ten} (ID: ${p.id}), Chức vụ: ${p.chuc_vu || 'N/A'}, Cấp bậc: ${p.cap_bac || 'N/A'}, SĐT: ${p.dien_thoai || 'N/A'}, Trạng thái: ${p.trang_thai || 'N/A'}`;
-          if (p.ngay_vao_dang) context += `, Đảng viên (vào đảng: ${p.ngay_vao_dang})`;
-          context += `\n`;
-        });
-
-        context += "\nDANH SÁCH MƯỢN THẺ:\n";
-        cards.forEach(c => {
-          context += `- Thẻ ${c.so_the}: BN ${c.ho_ten_benh_nhan}, Người chăm: ${c.ho_ten_nguoi_cham} (SĐT: ${c.sdt_nguoi_cham}), Trạng thái: ${c.trang_thai}, Tiền cược: ${c.so_tien_cuoc}\n`;
-        });
-
-        setContextData(context);
-        console.log("Assistant: Context loaded", context.length, "chars");
-      } catch (error) {
-        console.error("Assistant: Error loading context", error);
-      }
-    };
-
-    if (isOpen) {
-      fetchData();
-    }
-  }, [isOpen]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -83,7 +44,6 @@ export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     const modelMsgId = (Date.now() + 1).toString();
-    // Add placeholder for streaming
     setMessages(prev => [...prev, {
       id: modelMsgId,
       role: 'model',
@@ -92,15 +52,38 @@ export const Assistant: React.FC<AssistantProps> = ({ isOpen, onClose }) => {
     }]);
 
     try {
-      const responseText = await generateAIResponse(userMsg.text, contextData);
+      const res = await fetch(
+        'https://eghxnyzdnahwmpziwanz.supabase.co/functions/v1/chat',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnaHhueXpkbmFod21weml3YW56Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1NDk2MzgsImV4cCI6MjA4NDEyNTYzOH0.VEKpQcEVuyRmJoA4olnAQKTYMfTYQdNL21ZZOq6agME'
+          },
 
-      setMessages(prev => prev.map(msg =>
-        msg.id === modelMsgId ? { ...msg, text: responseText } : msg
-      ));
+          body: JSON.stringify({
+            message: userMsg.text
+          })
+        }
+      );
+
+      const data = await res.json();
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === modelMsgId
+            ? { ...msg, text: data.answer || 'Không có phản hồi từ trợ lý.' }
+            : msg
+        )
+      );
     } catch (err) {
-      setMessages(prev => prev.map(msg =>
-        msg.id === modelMsgId ? { ...msg, text: 'Có lỗi xảy ra, vui lòng thử lại.' } : msg
-      ));
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === modelMsgId
+            ? { ...msg, text: 'Có lỗi xảy ra, vui lòng thử lại.' }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
     }
