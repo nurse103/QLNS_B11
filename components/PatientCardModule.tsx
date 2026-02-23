@@ -647,7 +647,14 @@ export const PatientCardModule = () => {
                                                 <div className="text-xs text-slate-400 mt-0.5">Người cho mượn: {record.nguoi_cho_muon}</div>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className={`font-medium ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>{record.ho_ten_benh_nhan?.toUpperCase()}</div>
+                                                <div
+                                                    className="font-medium"
+                                                    style={record.trang_thai_tien_tra === 'Đã bàn giao' ? { color: '#009900' } : {}}
+                                                >
+                                                    <span className={record.trang_thai_tien_tra !== 'Đã bàn giao' && record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}>
+                                                        {record.ho_ten_benh_nhan?.toUpperCase()}
+                                                    </span>
+                                                </div>
                                                 <div className="text-xs text-slate-500">NS: {record.nam_sinh}</div>
                                             </td>
                                             <td className="px-4 py-3">
@@ -758,8 +765,13 @@ export const PatientCardModule = () => {
 
                                     {/* Line 1: Patient Name */}
                                     <div className="mb-1.5 flex justify-between items-start">
-                                        <h3 className={`font-bold text-base ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>
-                                            {record.ho_ten_benh_nhan?.toUpperCase()}
+                                        <h3
+                                            className="font-bold text-base"
+                                            style={record.trang_thai_tien_tra === 'Đã bàn giao' ? { color: '#009900' } : {}}
+                                        >
+                                            <span className={record.trang_thai_tien_tra !== 'Đã bàn giao' && record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}>
+                                                {record.ho_ten_benh_nhan?.toUpperCase()}
+                                            </span>
                                         </h3>
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                                             'bg-green-50 text-green-700 border-green-100'
