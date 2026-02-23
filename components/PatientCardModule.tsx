@@ -772,7 +772,7 @@ export const PatientCardModule = () => {
                                     <div className="flex items-center justify-between text-sm mb-1.5 bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
                                         <div className="flex items-center gap-1.5 font-bold text-blue-700">
                                             <CreditCard size={14} />
-                                            <span>Thẻ: {record.so_the}</span>
+                                            <span>{record.so_the}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5 text-slate-600 font-medium">
                                             <Calendar size={14} className="text-slate-400" />
