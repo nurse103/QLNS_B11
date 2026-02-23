@@ -149,8 +149,12 @@ export const PatientCardModule = () => {
         return recordDate >= startOfTarget && recordDate <= endOfTarget;
     });
 
-    // 2. Sort Descending by Date
-    baseFilteredRecords.sort((a, b) => new Date(b.ngay_muon).getTime() - new Date(a.ngay_muon).getTime());
+    // 2. Sort Descending by Date (Returned cards by return date, Borrowing cards by borrow date)
+    baseFilteredRecords.sort((a, b) => {
+        const dateA = a.trang_thai === 'Đã trả thẻ' && a.ngay_tra ? new Date(a.ngay_tra).getTime() : new Date(a.ngay_muon).getTime();
+        const dateB = b.trang_thai === 'Đã trả thẻ' && b.ngay_tra ? new Date(b.ngay_tra).getTime() : new Date(b.ngay_muon).getTime();
+        return dateB - dateA;
+    });
 
     // 3. Calculate Counts based on base filters
     const borrowingCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đang mượn thẻ').length;
@@ -730,15 +734,19 @@ export const PatientCardModule = () => {
                         </div>
 
                         {/* Mobile Card View */}
-                        <div className="md:hidden space-y-4 p-4 bg-slate-50">
+                        <div className="md:hidden space-y-3 p-4 bg-slate-50">
                             {filteredRecords.length === 0 ? (
                                 <div className="text-center text-slate-500 italic py-8">
                                     Chưa có dữ liệu nào phù hợp.
                                 </div>
                             ) : filteredRecords.map((record) => (
-                                <div key={record.id} className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 space-y-3 relative">
+                                <div
+                                    key={record.id}
+                                    onClick={() => handleView(record)}
+                                    className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 relative cursor-pointer active:bg-slate-50 transition-colors"
+                                >
                                     {isAdmin && (
-                                        <div className="absolute top-2 right-2">
+                                        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
@@ -748,71 +756,36 @@ export const PatientCardModule = () => {
                                         </div>
                                     )}
 
-                                    {/* Row 1: Name & Birth Year */}
-                                    <div className="flex justify-between items-start pt-1">
-                                        <h3 className={`font-bold text-base ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>{record.ho_ten_benh_nhan?.toUpperCase()}</h3>
-                                        <span className="text-sm text-slate-500 font-medium whitespace-nowrap ml-2">
-                                            NS: {record.nam_sinh || '---'}
-                                        </span>
-                                    </div>
-
-                                    {/* Row 2: Money Status & Record Status */}
-                                    <div className="flex justify-between items-center text-xs">
-                                        <div className="flex items-center gap-1">
-                                            {renderMoneyStatusBadge(record.trang_thai_tien_muon)}
+                                    <div className="flex justify-between items-center gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className={`font-bold text-sm truncate ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>
+                                                {record.ho_ten_benh_nhan?.toUpperCase()}
+                                            </h3>
                                         </div>
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                            'bg-green-50 text-green-700 border-green-100'
-                                            }`}>
-                                            {record.trang_thai}
-                                        </span>
-                                    </div>
-
-                                    {/* Row 3: Card Num & Borrow Time */}
-                                    <div className="flex items-center justify-between bg-slate-50 p-2 rounded text-sm">
-                                        <div className="flex items-center gap-1 font-bold text-blue-600">
+                                        <div className="flex items-center gap-1 font-bold text-blue-600 text-sm whitespace-nowrap bg-blue-50 px-2 py-1 rounded">
                                             <CreditCard size={14} />
                                             {record.so_the}
                                         </div>
-                                        <div className="text-slate-500 text-xs">
-                                            {formatDate(record.ngay_muon)}
-                                        </div>
                                     </div>
-
-                                    {/* Row 4: Actions */}
-                                    <div className="pt-2 border-t border-slate-100 flex gap-2">
-                                        <button
-                                            onClick={() => handleView(record)}
-                                            className="flex-1 py-1.5 text-slate-600 bg-slate-50 hover:bg-slate-100 rounded text-xs font-medium transition-colors border border-slate-200"
-                                        >
-                                            Xem
-                                        </button>
-                                        <button
-                                            onClick={() => handleEdit(record)}
-                                            disabled={record.nguoi_cho_muon !== currentUser?.full_name}
-                                            className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors border ${record.nguoi_cho_muon === currentUser?.full_name
-                                                ? 'text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-100'
-                                                : 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed'
-                                                }`}
-                                        >
-                                            Sửa
-                                        </button>
-                                        {can_delete && (
-                                            <button
-                                                onClick={() => handleDeleteRecord(record.id)}
-                                                className="flex-1 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-100"
-                                            >
-                                                Xóa
-                                            </button>
-                                        )}
-                                        {record.trang_thai === 'Đang mượn thẻ' && (
-                                            <button
-                                                onClick={() => handleOpenReturnModal(record)}
-                                                className="flex-1 py-1.5 rounded text-xs font-medium transition-colors shadow-sm bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-1"
-                                            >
-                                                <RotateCcw size={14} /> Trả thẻ
-                                            </button>
-                                        )}
+                                    <div className="flex justify-between items-center mt-1 text-[11px] text-slate-500">
+                                        <div className="flex items-center gap-1 truncate">
+                                            <User size={12} className="text-slate-400" />
+                                            <span>
+                                                {record.trang_thai === 'Đã trả thẻ'
+                                                    ? `Nhận: ${record.nguoi_nhan_lai_the || '---'}`
+                                                    : `Cho mượn: ${record.nguoi_cho_muon || '---'}`
+                                                }
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 whitespace-nowrap">
+                                            <Calendar size={12} className="text-slate-400" />
+                                            <span>
+                                                {record.trang_thai === 'Đã trả thẻ'
+                                                    ? formatDate(record.ngay_tra)
+                                                    : formatDate(record.ngay_muon)
+                                                }
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -962,10 +935,42 @@ export const PatientCardModule = () => {
                                         </div>
 
                                         {/* Action Footer for View Mode */}
-                                        <div className="flex justify-end pt-4 border-t border-slate-100">
+                                        <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-slate-100">
+                                            {formData.trang_thai === 'Đang mượn thẻ' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setIsModalOpen(false);
+                                                        handleOpenReturnModal(formData as CardRecord);
+                                                    }}
+                                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                                                >
+                                                    <RotateCcw size={18} /> Trả thẻ
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleEdit(formData as CardRecord)}
+                                                disabled={formData.nguoi_cho_muon !== currentUser?.full_name}
+                                                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border ${formData.nguoi_cho_muon === currentUser?.full_name
+                                                    ? 'text-orange-600 bg-white border-orange-200 hover:bg-orange-50'
+                                                    : 'text-slate-300 bg-slate-50 border-slate-200 cursor-not-allowed'
+                                                    }`}
+                                            >
+                                                <Edit size={18} /> Sửa
+                                            </button>
+                                            {can_delete && (
+                                                <button
+                                                    onClick={() => {
+                                                        handleDeleteRecord(formData.id!);
+                                                        setIsModalOpen(false);
+                                                    }}
+                                                    className="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-lg transition-colors flex items-center gap-2"
+                                                >
+                                                    <Trash2 size={18} /> Xóa
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => setIsModalOpen(false)}
-                                                className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
+                                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors"
                                             >
                                                 Đóng
                                             </button>
