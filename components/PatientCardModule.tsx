@@ -756,29 +756,26 @@ export const PatientCardModule = () => {
                                         </div>
                                     )}
 
-                                    <div className="flex justify-between items-center gap-2">
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className={`font-bold text-sm truncate ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>
-                                                {record.ho_ten_benh_nhan?.toUpperCase()}
-                                            </h3>
-                                        </div>
-                                        <div className="flex items-center gap-1 font-bold text-blue-600 text-sm whitespace-nowrap bg-blue-50 px-2 py-1 rounded">
-                                            <CreditCard size={14} />
-                                            {record.so_the}
-                                        </div>
+                                    {/* Line 1: Patient Name */}
+                                    <div className="mb-1.5 flex justify-between items-start">
+                                        <h3 className={`font-bold text-base ${record.trang_thai_tien_muon === 'Chưa bàn giao' ? 'text-red-600' : 'text-slate-800'}`}>
+                                            {record.ho_ten_benh_nhan?.toUpperCase()}
+                                        </h3>
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                            'bg-green-50 text-green-700 border-green-100'
+                                            }`}>
+                                            {record.trang_thai}
+                                        </span>
                                     </div>
-                                    <div className="flex justify-between items-center mt-1 text-[11px] text-slate-500">
-                                        <div className="flex items-center gap-1 truncate">
-                                            <User size={12} className="text-slate-400" />
-                                            <span>
-                                                {record.trang_thai === 'Đã trả thẻ'
-                                                    ? `Nhận: ${record.nguoi_nhan_lai_the || '---'}`
-                                                    : `Cho mượn: ${record.nguoi_cho_muon || '---'}`
-                                                }
-                                            </span>
+
+                                    {/* Line 2: Card Number and Date */}
+                                    <div className="flex items-center justify-between text-sm mb-1.5 bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
+                                        <div className="flex items-center gap-1.5 font-bold text-blue-700">
+                                            <CreditCard size={14} />
+                                            <span>Thẻ: {record.so_the}</span>
                                         </div>
-                                        <div className="flex items-center gap-1 whitespace-nowrap">
-                                            <Calendar size={12} className="text-slate-400" />
+                                        <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+                                            <Calendar size={14} className="text-slate-400" />
                                             <span>
                                                 {record.trang_thai === 'Đã trả thẻ'
                                                     ? formatDate(record.ngay_tra)
@@ -786,6 +783,19 @@ export const PatientCardModule = () => {
                                                 }
                                             </span>
                                         </div>
+                                    </div>
+
+                                    {/* Line 3: Responsible Person */}
+                                    <div className="flex items-center gap-2 text-xs text-slate-500 px-1">
+                                        <div className="bg-slate-100 p-1 rounded-full">
+                                            <User size={12} className="text-slate-500" />
+                                        </div>
+                                        <span className="font-medium">
+                                            {record.trang_thai === 'Đã trả thẻ'
+                                                ? `Người nhận thẻ: ${record.nguoi_nhan_lai_the || '---'}`
+                                                : `Người cho mượn: ${record.nguoi_cho_muon || '---'}`
+                                            }
+                                        </span>
                                     </div>
                                 </div>
                             ))}
