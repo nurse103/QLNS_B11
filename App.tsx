@@ -247,18 +247,14 @@ const Dashboard = () => {
 
         // 1. Calculate Basic Stats
         const total = activeData.length;
-        const partyMembers = activeData.filter(e => e.ngay_vao_dang || e.so_the_dang).length;
-        // Simple check for "Nghỉ" in status - but since we filtered for 'Đang làm việc', this might be 0?
-        // Wait, "Đang làm việc" is the main status. "Nghỉ phép", "Nghỉ ốm" might be in 'trang_thai' if that is how it's used?
-        // Usually 'trang_thai' determines if they are currently employed or resigned.
-        // If 'trang_thai' tracks daily status like "Nghỉ phép", then filtering by "Đang làm việc" excludes them?
-        // Based on user request "chỉ tính nhân viên có trạng thái đang làm việc", let's assume this means excluding "Đã nghỉ việc", "Đã chuyển công tác", etc.
-        // If "Nghỉ phép" is a status that replaces "Đang làm việc", then we should include it?
-        // BUT usually "Đã nghỉ việc" is the one to exclude.
-        // Let's assume we want to exclude "Đã nghỉ việc", "Đã chuyển công tác", "Đã nghỉ hưu".
-        // Or strictly "Đang làm việc".
-        // Let's stick to the user's exact words: "trạng thái đang làm việc".
-        // So we use activeData for all charts.
+
+        // Party Stats - Align with PartyModule (include học việc, tạm nghỉ việc, exclude đã nghỉ việc)
+        const activePartyStatuses = ['Đang làm việc', 'Đang học việc', 'Tạm nghỉ việc'];
+        const partyMembers = data.filter(e =>
+          (e.ngay_vao_dang || e.so_the_dang) &&
+          e.trang_thai &&
+          activePartyStatuses.includes(e.trang_thai)
+        ).length;
 
         const onLeave = activeData.filter(e => e.trang_thai && e.trang_thai.toLowerCase().includes('nghỉ')).length;
 

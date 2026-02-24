@@ -18,7 +18,8 @@ import {
     Clock,
     UserCheck,
     Stethoscope,
-    Heart
+    Heart,
+    X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -29,6 +30,7 @@ export const OverviewModule = () => {
     const [dutySchedules, setDutySchedules] = useState<DutySchedule[]>([]);
     const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
     const [todayAssignment, setTodayAssignment] = useState<Assignment | null>(null);
+    const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -234,13 +236,18 @@ export const OverviewModule = () => {
     const activePersonnel = personnel.filter(p => p.trang_thai === 'Đang làm việc');
 
     const doctors = activePersonnel.filter(p => checkRole(p, ['Bác sỹ', 'Chủ nhiệm khoa', 'Phó chủ nhiệm khoa', 'BS']));
-    const nurses = activePersonnel.filter(p => checkRole(p, ['Điều dưỡng']));
+    const nurses = activePersonnel.filter(p => checkRole(p, ['Điều dưỡng']) && !p.chuc_vu?.toLowerCase().includes('học việc'));
+    const traineeNurses = activePersonnel.filter(p => p.chuc_vu?.toLowerCase().includes('điều dưỡng') && p.chuc_vu?.toLowerCase().includes('học việc'));
     const residents = activePersonnel.filter(p => checkRole(p, ['Học viên', 'Nội trú', 'Cao học']));
 
-    // Party Stats
-    const partyMembers = activePersonnel.filter(isPartyMember);
-    const doctorPartyMembers = doctors.filter(isPartyMember);
-    const nursePartyMembers = nurses.filter(isPartyMember);
+    // Party Stats - Align with PartyModule
+    const activePartyStatuses = ['Đang làm việc', 'Đang học việc', 'Tạm nghỉ việc'];
+    const activePartyMembers = personnel.filter(p =>
+        isPartyMember(p) && p.trang_thai && activePartyStatuses.includes(p.trang_thai)
+    );
+
+    const doctorPartyMembers = activePartyMembers.filter(p => p.dien_quan_ly === 'Cán bộ');
+    const nursePartyMembers = activePartyMembers.filter(p => p.dien_quan_ly === 'Quân lực');
 
 
     const stats = {
@@ -248,10 +255,11 @@ export const OverviewModule = () => {
             total: activePersonnel.length,
             doctors: doctors.length,
             nurses: nurses.length,
+            traineeNurses: traineeNurses.length,
             residents: residents.length
         },
         party: {
-            total: partyMembers.length,
+            total: activePartyMembers.length,
             doctorCell: doctorPartyMembers.length,
             nurseCell: nursePartyMembers.length
         }
@@ -386,9 +394,12 @@ export const OverviewModule = () => {
                         )}
                     </div>
                     <div className="px-4 py-2 border-t border-slate-50">
-                        <Link to="/assignment" className="text-center text-xs text-blue-600 font-medium hover:underline block">
+                        <button
+                            onClick={() => setIsAssignmentModalOpen(true)}
+                            className="w-full text-center text-xs text-blue-600 font-medium hover:underline block"
+                        >
                             Xem chi tiết
-                        </Link>
+                        </button>
                     </div>
                 </div>
 
@@ -515,6 +526,15 @@ export const OverviewModule = () => {
                         <div>
                             <p className="text-xs text-slate-500">Điều dưỡng</p>
                             <p className="text-xl font-bold text-slate-800">{stats.personnel.nurses}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center shrink-0">
+                            <Activity size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500">ĐD học việc</p>
+                            <p className="text-xl font-bold text-slate-800">{stats.personnel.traineeNurses}</p>
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
@@ -722,6 +742,61 @@ export const OverviewModule = () => {
                     </div>
                 </div>
             </div>
+            {/* Daily Assignment Detail Modal */}
+            {isAssignmentModalOpen && todayAssignment && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 bg-[#009900] flex justify-between items-center">
+                            <h2 className="text-lg font-bold text-white uppercase tracking-wide">Chi tiết phân công hôm nay</h2>
+                            <button
+                                onClick={() => setIsAssignmentModalOpen(false)}
+                                className="text-white/80 hover:text-white transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                                <Calendar className="text-blue-600" size={20} />
+                                <span className="font-bold text-slate-700">
+                                    {new Date(todayAssignment.ngay_thang).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-4">
+                                {[
+                                    { label: 'Buồng 1', value: todayAssignment.buong_1, iconColor: 'bg-blue-100 text-blue-600' },
+                                    { label: 'Buồng 2', value: todayAssignment.buong_2, iconColor: 'bg-green-100 text-green-600' },
+                                    { label: 'Buồng 3', value: todayAssignment.buong_3, iconColor: 'bg-purple-100 text-purple-600' },
+                                    { label: 'Buồng 4', value: todayAssignment.buong_4, iconColor: 'bg-orange-100 text-orange-600' },
+                                    { label: 'Chạy ngoài', value: todayAssignment.chay_ngoai, iconColor: 'bg-pink-100 text-pink-600' },
+                                    { label: 'Chụp phim', value: todayAssignment.chup_phim, iconColor: 'bg-indigo-100 text-indigo-600' },
+                                    { label: 'Làm số', value: todayAssignment.lam_so, iconColor: 'bg-amber-100 text-amber-600' }
+                                ].map((item, idx) => item.value && (
+                                    <div key={idx} className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div className={`w-10 h-10 rounded-lg ${item.iconColor} flex items-center justify-center shrink-0 font-bold text-xs`}>
+                                            {idx < 4 ? `B${idx + 1}` : item.label.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">{item.label}</p>
+                                            <p className="text-slate-800 font-bold text-base">{item.value}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8">
+                                <button
+                                    onClick={() => setIsAssignmentModalOpen(false)}
+                                    className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                                >
+                                    Đóng cửa sổ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

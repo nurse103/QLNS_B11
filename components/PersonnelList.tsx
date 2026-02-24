@@ -73,6 +73,7 @@ export const PersonnelList = () => {
     const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
     const [bulkStatus, setBulkStatus] = useState<string>('');
     const [bulkObject, setBulkObject] = useState<string>('');
+    const [bulkManagementArea, setBulkManagementArea] = useState<string>('');
 
     // Form State
     const [formData, setFormData] = useState<Partial<Employee>>({});
@@ -130,16 +131,23 @@ export const PersonnelList = () => {
         setLoading(true);
         try {
             const data = await getPersonnel();
-            // Sort: Active first (not 'Đã nghỉ việc'), then Alphabetical name
+            // Sort Priority: Đang làm việc > Đang học việc > Tạm nghỉ việc > Đã nghỉ việc
+            const statusPriority: { [key: string]: number } = {
+                'Đang làm việc': 1,
+                'Đang học việc': 2,
+                'Tạm nghỉ việc': 3,
+                'Đã nghỉ việc': 4
+            };
+
             const sortedData = data.sort((a, b) => {
-                const isResignedA = a.trang_thai === 'Đã nghỉ việc';
-                const isResignedB = b.trang_thai === 'Đã nghỉ việc';
+                const priorityA = statusPriority[a.trang_thai || ''] || 99;
+                const priorityB = statusPriority[b.trang_thai || ''] || 99;
 
-                // If one is resigned and other is not, put resigned last
-                if (isResignedA && !isResignedB) return 1;
-                if (!isResignedA && isResignedB) return -1;
+                if (priorityA !== priorityB) {
+                    return priorityA - priorityB;
+                }
 
-                // If both same status (both active or both resigned), sort by name
+                // If same status, sort by name
                 return (a.ho_va_ten || '').localeCompare(b.ho_va_ten || '');
             });
             setPersonnel(sortedData);
@@ -156,6 +164,23 @@ export const PersonnelList = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+
+        if (name === 'ngay_vao_dang' && value) {
+            const admissionDate = new Date(value);
+            if (!isNaN(admissionDate.getTime())) {
+                const officialDate = new Date(admissionDate);
+                officialDate.setFullYear(admissionDate.getFullYear() + 1);
+                const officialDateStr = officialDate.toISOString().split('T')[0];
+
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: value,
+                    ngay_chinh_thuc: officialDateStr
+                }));
+                return;
+            }
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -210,8 +235,8 @@ export const PersonnelList = () => {
 
     const handleBulkUpdate = async () => {
         if (selectedIds.size === 0) return;
-        if (!bulkStatus && !bulkObject) {
-            alert("Vui lòng chọn trạng thái hoặc đối tượng để cập nhật.");
+        if (!bulkStatus && !bulkObject && !bulkManagementArea) {
+            alert("Vui lòng chọn ít nhất một thông tin cần cập nhật.");
             return;
         }
 
@@ -219,6 +244,7 @@ export const PersonnelList = () => {
             const updates: Partial<Employee> = {};
             if (bulkStatus) updates.trang_thai = bulkStatus;
             if (bulkObject) updates.doi_tuong = bulkObject;
+            if (bulkManagementArea) updates.dien_quan_ly = bulkManagementArea;
 
             await bulkUpdatePersonnel(Array.from(selectedIds), updates);
             alert(`Đã cập nhật cho ${selectedIds.size} nhân viên!`);
@@ -226,6 +252,7 @@ export const PersonnelList = () => {
             setSelectedIds(new Set());
             setBulkStatus('');
             setBulkObject('');
+            setBulkManagementArea('');
             fetchData();
         } catch (error) {
             console.error("Bulk update failed:", error);
@@ -893,7 +920,9 @@ export const PersonnelList = () => {
                                                         <label className="text-sm font-medium text-slate-700">Trạng thái</label>
                                                         <select name="trang_thai" value={formData.trang_thai || 'Đang làm việc'} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                                                             <option value="Đang làm việc">Đang làm việc</option>
+                                                            <option value="Đang học việc">Đang học việc</option>
                                                             <option value="Nghỉ phép">Nghỉ phép</option>
+                                                            <option value="Tạm nghỉ việc">Tạm nghỉ việc</option>
                                                             <option value="Đã nghỉ việc">Đã nghỉ việc</option>
                                                         </select>
                                                     </div>
@@ -1231,15 +1260,30 @@ export const PersonnelList = () => {
                                 >
                                     <option value="">-- Không thay đổi --</option>
                                     <option value="Đang làm việc">Đang làm việc</option>
+                                    <option value="Đang học việc">Đang học việc</option>
                                     <option value="Nghỉ phép">Nghỉ phép</option>
                                     <option value="Đi học">Đi học</option>
                                     <option value="Tranh thủ">Tranh thủ</option>
                                     <option value="Bệnh nhân">Bệnh nhân</option>
+                                    <option value="Tạm nghỉ việc">Tạm nghỉ việc</option>
                                     <option value="Chờ hưu">Chờ hưu</option>
                                     <option value="Nghỉ hưu">Nghỉ hưu</option>
                                     <option value="Chuyển công tác">Chuyển công tác</option>
                                     <option value="Phục viên/Xuất ngũ">Phục viên/Xuất ngũ</option>
                                     <option value="Đã nghỉ việc">Đã nghỉ việc</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Chọn diện quản lý mới (để trống nếu không đổi)</label>
+                                <select
+                                    value={bulkManagementArea}
+                                    onChange={(e) => setBulkManagementArea(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                                    <option value="">-- Không thay đổi --</option>
+                                    <option value="Cán bộ">Cán bộ</option>
+                                    <option value="Quân lực">Quân lực</option>
                                 </select>
                             </div>
 

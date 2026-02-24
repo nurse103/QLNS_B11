@@ -49,10 +49,37 @@ const formatDateVN = (dateStr: string | undefined | null) => {
     return `${day}/${month}/${year}`;
 };
 
+/**
+ * Sanitizes data by converting empty strings to null.
+ * This prevents "invalid input syntax for type date" errors in Postgres.
+ */
+const sanitizeData = <T>(data: T): T => {
+    if (data === null || data === undefined) return data;
+
+    if (typeof data === 'string') {
+        return (data.trim() === '' ? null : data) as unknown as T;
+    }
+
+    if (Array.isArray(data)) {
+        return data.map(item => sanitizeData(item)) as unknown as T;
+    }
+
+    if (typeof data === 'object') {
+        const sanitized = { ...data } as any;
+        for (const key in sanitized) {
+            sanitized[key] = sanitizeData(sanitized[key]);
+        }
+        return sanitized as T;
+    }
+
+    return data;
+};
+
 export const bulkUpdatePersonnel = async (ids: number[], updates: Partial<Employee>) => {
+    const sanitizedUpdates = sanitizeData(updates);
     const { error } = await supabase
         .from('dsnv')
-        .update(updates)
+        .update(sanitizedUpdates)
         .in('id', ids);
 
     console.log("Bulk Update Payload:", { ids, updates });
@@ -172,9 +199,10 @@ export const getAllTraining = async () => {
 };
 
 export const bulkCreatePersonnel = async (employees: Omit<Employee, 'id' | 'created_at'>[]) => {
+    const sanitizedEmployees = sanitizeData(employees);
     const { data, error } = await supabase
         .from('dsnv')
-        .insert(employees)
+        .insert(sanitizedEmployees)
         .select();
 
     if (error) {
@@ -192,10 +220,11 @@ export const createPersonnel = async (
     training: Training[] = [],
     salary: Salary[] = []
 ) => {
+    const sanitizedEmployee = sanitizeData(employee);
     // 1. Insert Employee
     const { data: empData, error: empError } = await supabase
         .from('dsnv')
-        .insert(employee)
+        .insert(sanitizedEmployee)
         .select()
         .single();
 
@@ -209,7 +238,8 @@ export const createPersonnel = async (
     // 2. Insert Related Data
     const insertRelated = async (table: string, items: any[]) => {
         if (items.length === 0) return;
-        const records = items.map(item => ({ ...item, dsnv_id: employeeId }));
+        const sanitizedItems = sanitizeData(items);
+        const records = sanitizedItems.map(item => ({ ...item, dsnv_id: employeeId }));
         const { error } = await supabase.from(table).insert(records);
         if (error) {
             console.error(`Error inserting into ${table}:`, error);
@@ -259,10 +289,11 @@ export const updatePersonnel = async (
     training: Training[],
     salary: Salary[]
 ) => {
+    const sanitizedEmployee = sanitizeData(employee);
     // 1. Update Employee
     const { error: empError } = await supabase
         .from('dsnv')
-        .update(employee)
+        .update(sanitizedEmployee)
         .eq('id', id);
 
     if (empError) throw empError;
@@ -283,8 +314,9 @@ export const updatePersonnel = async (
 
         // Insert all fresh
         if (items.length > 0) {
-            const records = items.map(item => {
-                const { id: _, ...rest } = item; // Remove ID to let DB generate new ones, or keep if we want (but simpler to regenerate)
+            const sanitizedItems = sanitizeData(items);
+            const records = sanitizedItems.map(item => {
+                const { id: _, ...rest } = item; // Remove ID to let DB generate new ones
                 return { ...rest, dsnv_id: id };
             });
             const { error: insError } = await supabase.from(table).insert(records);
