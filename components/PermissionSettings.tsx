@@ -37,6 +37,7 @@ export const PermissionSettings = () => {
         { key: 'r-sports', label: 'Hội thao kỹ thuật', level: 1 },
         { key: 'r-conference', label: 'Tham dự báo cáo', level: 1 },
         { key: 'rewards', label: 'Khen thưởng - Kỷ luật', level: 0 },
+        { key: 'assignments', label: 'Phân công hàng ngày', level: 0 },
         { key: 'party-management', label: 'Quản lý đảng viên', level: 0 },
         { key: 'patient-card-management', label: 'Quản lý thẻ chăm', level: 0 },
         { key: 'absence', label: 'Quản lý Quân số nghỉ', level: 0 },

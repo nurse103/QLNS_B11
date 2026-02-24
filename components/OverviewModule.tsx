@@ -4,7 +4,8 @@ import { getDutySchedules, DutySchedule } from '../services/dutyScheduleService'
 import { getAbsencesByDate } from '../services/absenceService';
 import { getLeavesOnDate } from '../services/leaveService';
 import { getPersonnel, Employee } from '../services/personnelService';
-import { Schedule, AbsenceRecord, LeaveRecord } from '../types';
+import { getAssignmentByDate } from '../services/assignmentService';
+import { Schedule, AbsenceRecord, LeaveRecord, Assignment } from '../types';
 import {
     Calendar,
     CalendarClock,
@@ -27,6 +28,7 @@ export const OverviewModule = () => {
     const [workSchedules, setWorkSchedules] = useState<Schedule[]>([]);
     const [dutySchedules, setDutySchedules] = useState<DutySchedule[]>([]);
     const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
+    const [todayAssignment, setTodayAssignment] = useState<Assignment | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -36,17 +38,19 @@ export const OverviewModule = () => {
                 const currentMonth = today.getMonth() + 1;
                 const currentYear = today.getFullYear();
 
-                const [pData, wData, dData, aData, lData] = await Promise.all([
+                const [pData, wData, dData, aData, lData, assData] = await Promise.all([
                     getPersonnel(),
                     getSchedules(),
                     getDutySchedules(currentMonth, currentYear),
                     getAbsencesByDate(new Date().toISOString().split('T')[0]),
-                    getLeavesOnDate(new Date().toISOString().split('T')[0])
+                    getLeavesOnDate(new Date().toISOString().split('T')[0]),
+                    getAssignmentByDate(new Date().toISOString().split('T')[0])
                 ]);
 
                 setPersonnel(pData || []);
                 setWorkSchedules(wData || []);
                 setDutySchedules(dData || []);
+                setTodayAssignment(assData);
 
                 // Merge absences (Daily) and leaves (Long-term/Tranh thu)
                 // Map LeaveRecord to AbsenceRecord format for display
@@ -289,8 +293,8 @@ export const OverviewModule = () => {
                 )}
             </div>
 
-            {/* Row 1: 3 Columns - Ongoing Work, Duty Today, Absence Today */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+            {/* Row 1: 4 Columns - Ongoing Work, Daily Assignment, Duty Today, Absence Today */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 h-full">
 
                 {/* Column 1: Ongoing Work */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-h-[350px]">
@@ -339,8 +343,50 @@ export const OverviewModule = () => {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Column 2: Daily Assignment */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-100 flex flex-col h-full min-h-[350px]">
+                    <div className="px-5 py-3 bg-[#009900] rounded-t-xl flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-1.5 bg-white/20 text-white rounded-lg">
+                                <Users size={18} />
+                            </div>
+                            <h3 className="font-bold text-white uppercase text-sm">Phân công hàng ngày</h3>
+                        </div>
+                    </div>
+
+                    <div className="p-4 flex-1 overflow-y-auto max-h-[280px] space-y-3 pr-1 custom-scrollbar">
+                        {todayAssignment ? (
+                            <div className="space-y-2">
+                                {[
+                                    { label: 'Buồng 1', value: todayAssignment.buong_1 },
+                                    { label: 'Buồng 2', value: todayAssignment.buong_2 },
+                                    { label: 'Buồng 3', value: todayAssignment.buong_3 },
+                                    { label: 'Buồng 4', value: todayAssignment.buong_4 },
+                                    { label: 'Chạy ngoài', value: todayAssignment.chay_ngoai },
+                                    { label: 'Chụp phim', value: todayAssignment.chup_phim },
+                                    { label: 'Làm số', value: todayAssignment.lam_so }
+                                ].map((item, idx) => item.value && (
+                                    <div key={idx} className="p-2 bg-slate-50 rounded-lg border border-slate-100 text-sm">
+                                        <p className="text-[10px] text-blue-600 uppercase font-bold tracking-wide">{item.label}</p>
+                                        <p className="text-slate-800 font-bold">{item.value}</p>
+                                    </div>
+                                ))}
+                                {!Object.values(todayAssignment).some(v => v && v !== todayAssignment.id && v !== todayAssignment.ngay_thang && v !== todayAssignment.created_at && v !== todayAssignment.updated_at) && (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-400 py-6">
+                                        <p className="text-sm italic">Chưa có phân công chi tiết</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 py-6">
+                                <p className="text-sm">Chưa có phân công</p>
+                            </div>
+                        )}
+                    </div>
                     <div className="px-4 py-2 border-t border-slate-50">
-                        <Link to="/schedule" className="text-center text-xs text-blue-600 font-medium hover:underline block">
+                        <Link to="/assignment" className="text-center text-xs text-blue-600 font-medium hover:underline block">
                             Xem chi tiết
                         </Link>
                     </div>

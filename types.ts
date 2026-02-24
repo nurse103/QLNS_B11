@@ -122,3 +122,42 @@ export interface CardRecord {
   trang_thai_tien_tra: string | null;
   created_at?: string;
 }
+
+export interface Reward {
+  id: string;
+  loaikt: string;
+  htkt: string;
+  dv: string;
+  capkt: string;
+  ldkt: string | null;
+  qdkt: string | null;
+  namkt: string;
+  image: string | null;
+  created_at?: string;
+}
+
+export interface Decision {
+  id: string;
+  loai_qd: 'Khen thưởng' | 'Kỷ luật';
+  so_quyet_dinh: string;
+  ngay_ky: string;
+  cap_quyet_dinh: string;
+  noi_dung: string;
+  ghi_chu: string | null;
+  file_quyet_dinh: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+export interface Assignment {
+  id: string;
+  ngay_thang: string;
+  buong_1: string | null;
+  buong_2: string | null;
+  buong_3: string | null;
+  buong_4: string | null;
+  chay_ngoai: string | null;
+  chup_phim: string | null;
+  lam_so: string | null;
+  created_at?: string;
+  updated_at?: string;
+}

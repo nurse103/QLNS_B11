@@ -76,6 +76,8 @@ import { WorkScheduleModule } from './components/WorkScheduleModule';
 import { AbsenceModule } from './components/AbsenceModule';
 import { PatientCardModule } from './components/PatientCardModule';
 import { CongVanModule } from './components/CongVanModule';
+import { RewardsModule } from './components/RewardsModule';
+import { AssignmentModule } from './components/AssignmentModule';
 
 // Charts
 import {
@@ -678,6 +680,7 @@ function App() {
       ]
     },
     { id: 'rewards', label: 'Khen thưởng - Kỷ luật', icon: Award, path: '/rewards' },
+    { id: 'assignments', label: 'Phân công hàng ngày', icon: CalendarClock, path: '/assignments' },
 
     { id: 'party-management', label: 'Quản lý đảng viên', icon: UserCheck, path: '/dang-vien' },
     { id: 'patient-card-management', label: 'Quản lý thẻ chăm', icon: CreditCard, path: '/patient-cards' },
@@ -899,7 +902,8 @@ function App() {
               <Route path="/patient-cards" element={<PatientCardModule />} />
               <Route path="/cong-van" element={<CongVanModule />} />
               <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
-              <Route path="/rewards" element={<PlaceholderPage title="Khen thưởng & Kỷ luật" />} />
+              <Route path="/rewards" element={<RewardsModule />} />
+              <Route path="/assignments" element={<AssignmentModule />} />
               <Route path="/combat" element={<PlaceholderPage title="Sẵn sàng chiến đấu" />} />
               <Route path="/duty" element={<ScheduleModule />} />
               <Route path="/schedule" element={<WorkScheduleModule />} />
