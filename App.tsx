@@ -56,6 +56,7 @@ import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
 import { User as AuthUser, getCurrentUser } from './services/authService';
 import { getPermissionsByRole, Permission } from './services/permissionService';
+import { getMenuOrder } from './services/settingsService';
 
 // Date formatting helper
 const formatDateVN = (dateStr: string | undefined | null) => {
@@ -605,6 +606,15 @@ function App() {
 
   // Permission State
   const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
+  const [currentMenuOrder, setCurrentMenuOrder] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchMenuOrder = async () => {
+      const order = await getMenuOrder();
+      setCurrentMenuOrder(order);
+    };
+    fetchMenuOrder();
+  }, []);
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -749,6 +759,20 @@ function App() {
     return item;
   }).filter(Boolean) as MenuItem[];
 
+  // 4. Sort based on custom order
+  const sortedMenuItems = [...filteredMenuItems];
+  if (currentMenuOrder.length > 0) {
+    sortedMenuItems.sort((a, b) => {
+      const indexA = currentMenuOrder.indexOf(a.id);
+      const indexB = currentMenuOrder.indexOf(b.id);
+
+      const posA = indexA === -1 ? 999 : indexA;
+      const posB = indexB === -1 ? 999 : indexB;
+
+      return posA - posB;
+    });
+  }
+
   return (
     <HashRouter>
       <div className="flex h-screen bg-slate-50 overflow-hidden">
@@ -775,7 +799,7 @@ function App() {
           <div className="flex-1 overflow-y-auto py-4 scrollbar-hide">
             <nav className="space-y-1">
 
-              {filteredMenuItems.map(item => (
+              {sortedMenuItems.map(item => (
                 <SidebarItem
                   key={item.id}
                   item={item}
