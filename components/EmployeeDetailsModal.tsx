@@ -46,19 +46,19 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
     );
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm md:p-4 animate-in fade-in duration-200">
+            <div className="bg-white md:rounded-2xl rounded-none shadow-2xl w-full max-w-4xl h-full md:h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="bg-slate-50 border-b border-slate-200 p-6 flex justify-between items-start shrink-0">
-                    <div className="flex gap-4 items-center">
-                        <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg ring-4 ring-blue-50">
+                <div className="bg-slate-50 border-b border-slate-200 p-4 md:p-6 flex justify-between items-start shrink-0">
+                    <div className="flex gap-3 md:gap-4 items-center">
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl md:text-2xl font-bold shadow-lg ring-4 ring-blue-50">
                             {employee.ho_va_ten ? employee.ho_va_ten.charAt(0).toUpperCase() : 'NV'}
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">{employee.ho_va_ten}</h2>
-                            <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200"><Shield size={14} className="text-blue-500" /> {employee.cap_bac || '---'}</span>
-                                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200"><Briefcase size={14} className="text-orange-500" /> {employee.chuc_vu || '---'}</span>
+                            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">{employee.ho_va_ten}</h2>
+                            <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-slate-500 mt-1">
+                                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200"><Shield size={12} className="text-blue-500" /> {employee.cap_bac || '---'}</span>
+                                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200"><Briefcase size={12} className="text-orange-500" /> {employee.chuc_vu || '---'}</span>
                                 <span className={`flex items-center gap-1 px-2 py-0.5 rounded border ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'
                                     }`}>
                                     <Activity size={14} /> {employee.trang_thai || '---'}
@@ -72,31 +72,31 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-slate-200 px-6 bg-white shrink-0 overflow-x-auto scrollbar-hide">
+                <div className="flex border-b border-slate-200 px-4 md:px-6 bg-white shrink-0 overflow-x-auto scrollbar-hide sticky top-0 z-10">
                     {[
                         { id: 'general', label: 'Thông tin chung', icon: User },
-                        { id: 'family', label: 'Quan hệ gia đình', icon: Users },
-                        { id: 'work', label: 'Quá trình công tác', icon: Briefcase },
-                        { id: 'training', label: 'Đào tạo & Bồi dưỡng', icon: GraduationCap },
-                        { id: 'salary', label: 'Lương & Quân hàm', icon: Award },
+                        { id: 'family', label: 'Gia đình', icon: Users },
+                        { id: 'work', label: 'Công tác', icon: Briefcase },
+                        { id: 'training', label: 'Đào tạo', icon: GraduationCap },
+                        { id: 'salary', label: 'Lương & Hàm', icon: Award },
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-6 py-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
-                                ? 'border-blue-600 text-blue-600 bg-blue-50/30'
+                            className={`flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
+                                ? 'border-blue-600 text-blue-600 bg-blue-50/20'
                                 : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                 }`}
                         >
-                            <tab.icon size={18} />
+                            <tab.icon size={16} />
                             {tab.label}
                         </button>
                     ))}
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-full">
+                <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-slate-50/50">
+                    <div className="bg-white md:rounded-xl shadow-sm border border-slate-200 p-4 md:p-6 min-h-full">
                         {activeTab === 'general' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 animate-in slide-in-from-bottom-2 duration-300">
                                 <div>

@@ -744,9 +744,9 @@ export const OverviewModule = () => {
             </div>
             {/* Daily Assignment Detail Modal */}
             {isAssignmentModalOpen && todayAssignment && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="px-6 py-4 bg-[#009900] flex justify-between items-center">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center md:p-4 animate-in fade-in duration-200">
+                    <div className="bg-white md:rounded-2xl rounded-none shadow-2xl w-full max-w-lg h-full md:h-auto overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+                        <div className="px-6 py-4 bg-[#009900] flex justify-between items-center shrink-0">
                             <h2 className="text-lg font-bold text-white uppercase tracking-wide">Chi tiết phân công hôm nay</h2>
                             <button
                                 onClick={() => setIsAssignmentModalOpen(false)}
@@ -755,7 +755,7 @@ export const OverviewModule = () => {
                                 <X size={24} />
                             </button>
                         </div>
-                        <div className="p-6">
+                        <div className="p-4 md:p-6 flex-1 overflow-y-auto">
                             <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
                                 <Calendar className="text-blue-600" size={20} />
                                 <span className="font-bold text-slate-700">
@@ -763,7 +763,7 @@ export const OverviewModule = () => {
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                                 {[
                                     { label: 'Buồng 1', value: todayAssignment.buong_1, iconColor: 'bg-blue-100 text-blue-600' },
                                     { label: 'Buồng 2', value: todayAssignment.buong_2, iconColor: 'bg-green-100 text-green-600' },
@@ -773,19 +773,19 @@ export const OverviewModule = () => {
                                     { label: 'Chụp phim', value: todayAssignment.chup_phim, iconColor: 'bg-indigo-100 text-indigo-600' },
                                     { label: 'Làm số', value: todayAssignment.lam_so, iconColor: 'bg-amber-100 text-amber-600' }
                                 ].map((item, idx) => item.value && (
-                                    <div key={idx} className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                        <div className={`w-10 h-10 rounded-lg ${item.iconColor} flex items-center justify-center shrink-0 font-bold text-xs`}>
+                                    <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white transition-colors hover:shadow-sm">
+                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${item.iconColor} flex items-center justify-center shrink-0 font-bold text-[10px] md:text-xs`}>
                                             {idx < 4 ? `B${idx + 1}` : item.label.charAt(0)}
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">{item.label}</p>
-                                            <p className="text-slate-800 font-bold text-base">{item.value}</p>
+                                        <div className="min-w-0">
+                                            <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-0.5 truncate">{item.label}</p>
+                                            <p className="text-slate-800 font-bold text-sm md:text-base truncate">{item.value}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="mt-8">
+                            <div className="mt-8 md:block hidden">
                                 <button
                                     onClick={() => setIsAssignmentModalOpen(false)}
                                     className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
@@ -793,6 +793,15 @@ export const OverviewModule = () => {
                                     Đóng cửa sổ
                                 </button>
                             </div>
+                        </div>
+                        {/* Mobile Footer Button */}
+                        <div className="p-4 md:hidden border-t border-slate-100 bg-slate-50 shrink-0">
+                            <button
+                                onClick={() => setIsAssignmentModalOpen(false)}
+                                className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold active:scale-95 transition-all"
+                            >
+                                Đóng cửa sổ
+                            </button>
                         </div>
                     </div>
                 </div>
