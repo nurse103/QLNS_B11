@@ -49,49 +49,46 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm md:p-4 animate-in fade-in duration-200">
             <div className="bg-white md:rounded-2xl rounded-none shadow-2xl w-full max-w-4xl h-full md:h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="bg-slate-50 border-b border-slate-200 p-4 md:p-6 flex justify-between items-start shrink-0">
-                    <div className="flex gap-3 md:gap-4 items-center">
-                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl md:text-2xl font-bold shadow-lg ring-4 ring-blue-50">
-                            {employee.ho_va_ten ? employee.ho_va_ten.charAt(0).toUpperCase() : 'NV'}
-                        </div>
-                        <div>
-                            <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">{employee.ho_va_ten}</h2>
-                            <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-slate-500 mt-1">
-                                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200"><Shield size={12} className="text-blue-500" /> {employee.cap_bac || '---'}</span>
-                                <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200"><Briefcase size={12} className="text-orange-500" /> {employee.chuc_vu || '---'}</span>
-                                <span className={`flex items-center gap-1 px-2 py-0.5 rounded border ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'
-                                    }`}>
-                                    <Activity size={14} /> {employee.trang_thai || '---'}
-                                </span>
-                            </div>
+                <div className="bg-slate-50 border-b border-slate-200 p-4 md:p-6 flex justify-between items-center shrink-0">
+                    <div className="flex flex-col">
+                        <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">{employee.ho_va_ten}</h2>
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-slate-500 mt-1.5">
+                            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm"><Shield size={12} className="text-blue-500" /> {employee.cap_bac || '---'}</span>
+                            <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm"><Briefcase size={12} className="text-orange-500" /> {employee.chuc_vu || '---'}</span>
+                            <span className={`flex items-center gap-1 px-2 py-0.5 rounded border shadow-sm ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                                }`}>
+                                <Activity size={14} /> {employee.trang_thai || '---'}
+                            </span>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-full transition-all shadow-sm border border-transparent hover:border-slate-200">
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all border border-transparent hover:border-red-100 shrink-0">
                         <X size={24} />
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex border-b border-slate-200 px-4 md:px-6 bg-white shrink-0 overflow-x-auto scrollbar-hide sticky top-0 z-10">
-                    {[
-                        { id: 'general', label: 'Thông tin chung', icon: User },
-                        { id: 'family', label: 'Gia đình', icon: Users },
-                        { id: 'work', label: 'Công tác', icon: Briefcase },
-                        { id: 'training', label: 'Đào tạo', icon: GraduationCap },
-                        { id: 'salary', label: 'Lương & Hàm', icon: Award },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm font-bold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
-                                ? 'border-blue-600 text-blue-600 bg-blue-50/20'
-                                : 'border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                                }`}
-                        >
-                            <tab.icon size={16} />
-                            {tab.label}
-                        </button>
-                    ))}
+                {/* Navigation Buttons Grid */}
+                <div className="bg-white border-b border-slate-200 p-3 md:p-4 shrink-0">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 max-w-full">
+                        {[
+                            { id: 'general', label: 'Thông tin chung', icon: User, color: 'blue' },
+                            { id: 'family', label: 'Gia đình', icon: Users, color: 'purple' },
+                            { id: 'work', label: 'Công tác', icon: Briefcase, color: 'orange' },
+                            { id: 'training', label: 'Đào tạo', icon: GraduationCap, color: 'indigo' },
+                            { id: 'salary', label: 'Lương & Hàm', icon: Award, color: 'yellow' },
+                        ].map((btn) => (
+                            <button
+                                key={btn.id}
+                                onClick={() => setActiveTab(btn.id as any)}
+                                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] md:text-xs font-bold transition-all border shadow-sm ${activeTab === btn.id
+                                    ? `bg-${btn.color}-600 border-${btn.color}-600 text-white shadow-${btn.color}-100 ring-2 ring-${btn.color}-100 scale-[1.02]`
+                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50 active:scale-95'
+                                    }`}
+                            >
+                                <btn.icon size={14} className={activeTab === btn.id ? 'text-white' : `text-${btn.color}-500`} />
+                                <span className="truncate">{btn.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Content */}
