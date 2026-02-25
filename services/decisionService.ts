@@ -22,9 +22,10 @@ export const getDecisions = async (page: number = 1, pageSize: number = 10) => {
 };
 
 export const createDecision = async (decision: Omit<Decision, 'id' | 'created_at' | 'updated_at'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('quyet_dinh')
-        .insert(decision)
+        .insert({ ...decision, created_by: user?.id ?? null })
         .select()
         .single();
 

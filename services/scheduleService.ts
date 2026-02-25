@@ -22,9 +22,10 @@ export const getSchedules = async (): Promise<Schedule[]> => {
 };
 
 export const createSchedule = async (schedule: Omit<Schedule, 'id' | 'created_at'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from(TABLE_NAME)
-        .insert([schedule])
+        .insert([{ ...schedule, created_by: user?.id ?? null }])
         .select();
 
     if (error) throw error;

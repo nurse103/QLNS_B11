@@ -6,6 +6,7 @@ import { getDutySchedules } from '../services/dutyScheduleService';
 import { getAuthUser } from '../services/authService';
 import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, FileText, Zap, Copy, CheckSquare, Square } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { canModify } from '../utils/ownershipUtils';
 
 export const AbsenceModule = () => {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -14,7 +15,7 @@ export const AbsenceModule = () => {
     const [loading, setLoading] = useState(true);
 
     const currentUser = getAuthUser();
-    const canModify = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+    const isManagerOrAdmin = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
     // Selection & Copy State
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -281,7 +282,7 @@ export const AbsenceModule = () => {
                             <Copy size={18} /> Sao chép ({selectedIds.size})
                         </button>
                     )}
-                    {canModify && (
+                    {isManagerOrAdmin && (
                         <>
                             <button
                                 onClick={handleAutoGenerate}
@@ -373,12 +374,16 @@ export const AbsenceModule = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => handleOpenModal(record)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(record.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    {canModify(record, currentUser) && (
+                                                        <button onClick={() => handleOpenModal(record)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    )}
+                                                    {canModify(record, currentUser) && (
+                                                        <button onClick={() => handleDelete(record.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -432,18 +437,22 @@ export const AbsenceModule = () => {
 
                                         {/* Actions */}
                                         <div className="pt-3 border-t border-slate-100 flex gap-2">
-                                            <button
-                                                onClick={() => handleOpenModal(record)}
-                                                className="flex-1 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-xs font-medium transition-colors border border-blue-100 flex justify-center items-center gap-1"
-                                            >
-                                                <Edit size={14} /> Sửa
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(record.id)}
-                                                className="flex-1 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-100 flex justify-center items-center gap-1"
-                                            >
-                                                <Trash2 size={14} /> Xóa
-                                            </button>
+                                            {canModify(record, currentUser) && (
+                                                <button
+                                                    onClick={() => handleOpenModal(record)}
+                                                    className="flex-1 py-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded text-xs font-medium transition-colors border border-blue-100 flex justify-center items-center gap-1"
+                                                >
+                                                    <Edit size={14} /> Sửa
+                                                </button>
+                                            )}
+                                            {canModify(record, currentUser) && (
+                                                <button
+                                                    onClick={() => handleDelete(record.id)}
+                                                    className="flex-1 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors border border-red-100 flex justify-center items-center gap-1"
+                                                >
+                                                    <Trash2 size={14} /> Xóa
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))

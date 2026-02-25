@@ -12,6 +12,7 @@ export interface CongVan {
     phan_nhom: string;
     file_dinh_kem: string | null;
     ghi_chu: string | null;
+    created_by?: string | null;
 }
 
 export const getCongVanList = async () => {
@@ -28,9 +29,10 @@ export const getCongVanList = async () => {
 };
 
 export const createCongVan = async (congVan: Omit<CongVan, 'id' | 'created_at'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('cong_van')
-        .insert(congVan)
+        .insert({ ...congVan, created_by: user?.id ?? null })
         .select()
         .single();
 

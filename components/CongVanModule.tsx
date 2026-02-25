@@ -21,9 +21,12 @@ import {
     ExternalLink
 } from 'lucide-react';
 import { usePermissions } from '../hooks/usePermissions';
+import { getAuthUser } from '../services/authService';
+import { canModify } from '../utils/ownershipUtils';
 
 export const CongVanModule = () => {
     const { can_add, can_edit, can_delete } = usePermissions('cong_van');
+    const currentUser = getAuthUser();
     const [documents, setDocuments] = useState<CongVan[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -320,7 +323,7 @@ export const CongVanModule = () => {
                                     <h3 className="font-semibold text-slate-800">{doc.so_hieu}</h3>
                                 </div>
                                 <div className="flex gap-2">
-                                    {can_edit && (
+                                    {can_edit && canModify(doc, currentUser) && (
                                         <button
                                             onClick={() => handleEdit(doc)}
                                             className="p-1.5 bg-slate-50 rounded text-slate-500 hover:text-blue-600 transition-colors"
@@ -328,7 +331,7 @@ export const CongVanModule = () => {
                                             <Edit size={16} />
                                         </button>
                                     )}
-                                    {can_delete && (
+                                    {can_delete && canModify(doc, currentUser) && (
                                         <button
                                             onClick={() => handleDelete(doc.id)}
                                             className="p-1.5 bg-red-50 rounded text-red-500 hover:bg-red-100 transition-colors"
@@ -415,7 +418,7 @@ export const CongVanModule = () => {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                {can_edit && (
+                                                {can_edit && canModify(doc, currentUser) && (
                                                     <button
                                                         onClick={() => handleEdit(doc)}
                                                         className="p-1.5 hover:bg-slate-200 rounded text-slate-500 hover:text-blue-600 transition-colors"
@@ -424,7 +427,7 @@ export const CongVanModule = () => {
                                                         <Edit size={16} />
                                                     </button>
                                                 )}
-                                                {can_delete && (
+                                                {can_delete && canModify(doc, currentUser) && (
                                                     <button
                                                         onClick={() => handleDelete(doc.id)}
                                                         className="p-1.5 hover:bg-red-50 rounded text-slate-500 hover:text-red-600 transition-colors"

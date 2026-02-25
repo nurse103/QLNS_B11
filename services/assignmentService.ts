@@ -16,9 +16,10 @@ export const getAssignments = async (page = 1, pageSize = 10) => {
 };
 
 export const createAssignment = async (assignment: Partial<Assignment>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('phan_cong')
-        .insert([assignment])
+        .insert([{ ...assignment, created_by: user?.id ?? null }])
         .select()
         .single();
 

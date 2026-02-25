@@ -4,11 +4,14 @@ import { getLeaveRecords, createLeaveRecord, updateLeaveRecord, deleteLeaveRecor
 import { getPersonnel } from '../services/personnelService';
 import { Plus, Search, Edit, Trash2, X, Save, Calendar, User, FileText, MapPin, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { getAuthUser } from '../services/authService';
+import { canModify } from '../utils/ownershipUtils';
 
 export const LeaveModule = () => {
     const [records, setRecords] = useState<LeaveRecord[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
+    const currentUser = getAuthUser();
     const [searchTerm, setSearchTerm] = useState('');
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -213,12 +216,16 @@ export const LeaveModule = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => handleOpenModal(record)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button onClick={() => handleDelete(record.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    {canModify(record, currentUser) && (
+                                                        <button onClick={() => handleOpenModal(record)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                            <Edit size={16} />
+                                                        </button>
+                                                    )}
+                                                    {canModify(record, currentUser) && (
+                                                        <button onClick={() => handleDelete(record.id)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -272,18 +279,22 @@ export const LeaveModule = () => {
                                     </div>
 
                                     <div className="flex justify-end gap-3 pt-2 pl-[52px]">
-                                        <button
-                                            onClick={() => handleOpenModal(record)}
-                                            className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 flex items-center justify-center gap-2"
-                                        >
-                                            <Edit size={14} /> Sửa
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(record.id)}
-                                            className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-2"
-                                        >
-                                            <Trash2 size={14} /> Xóa
-                                        </button>
+                                        {canModify(record, currentUser) && (
+                                            <button
+                                                onClick={() => handleOpenModal(record)}
+                                                className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 flex items-center justify-center gap-2"
+                                            >
+                                                <Edit size={14} /> Sửa
+                                            </button>
+                                        )}
+                                        {canModify(record, currentUser) && (
+                                            <button
+                                                onClick={() => handleDelete(record.id)}
+                                                className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-2"
+                                            >
+                                                <Trash2 size={14} /> Xóa
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}

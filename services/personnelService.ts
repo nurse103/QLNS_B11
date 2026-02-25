@@ -228,10 +228,12 @@ export const createPersonnel = async (
     salary: Salary[] = []
 ) => {
     const sanitizedEmployee = sanitizeData(employee);
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const createdBy = user?.id ?? null;
     // 1. Insert Employee
     const { data: empData, error: empError } = await supabase
         .from('dsnv')
-        .insert(sanitizedEmployee)
+        .insert({ ...sanitizedEmployee, created_by: createdBy })
         .select()
         .single();
 
@@ -246,7 +248,7 @@ export const createPersonnel = async (
     const insertRelated = async (table: string, items: any[]) => {
         if (items.length === 0) return;
         const sanitizedItems = sanitizeData(items);
-        const records = sanitizedItems.map(item => ({ ...item, dsnv_id: employeeId }));
+        const records = sanitizedItems.map(item => ({ ...item, dsnv_id: employeeId, created_by: createdBy }));
         const { error } = await supabase.from(table).insert(records);
         if (error) {
             console.error(`Error inserting into ${table}:`, error);

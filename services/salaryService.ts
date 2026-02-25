@@ -30,9 +30,10 @@ export const getSalaryRecords = async () => {
 };
 
 export const createSalaryRecord = async (record: Salary) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('len_luong')
-        .insert(record)
+        .insert({ ...record, created_by: user?.id ?? null })
         .select()
         .single();
 

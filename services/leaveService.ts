@@ -16,9 +16,10 @@ export const getLeaveRecords = async () => {
 };
 
 export const createLeaveRecord = async (record: Omit<LeaveRecord, 'id' | 'created_at'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('quan_ly_phep')
-        .insert(record)
+        .insert({ ...record, created_by: user?.id ?? null })
         .select()
         .single();
 

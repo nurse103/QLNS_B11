@@ -17,9 +17,10 @@ export const getAbsencesByDate = async (date: string) => {
 };
 
 export const createAbsenceRecord = async (record: Omit<AbsenceRecord, 'id' | 'created_at'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('quan_so_nghi')
-        .insert(record)
+        .insert({ ...record, created_by: user?.id ?? null })
         .select()
         .single();
 

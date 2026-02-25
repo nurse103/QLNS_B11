@@ -44,9 +44,10 @@ export const getDutySchedules = async (month?: number, year?: number) => {
 };
 
 export const createDutySchedule = async (schedule: Omit<DutySchedule, 'id'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('lich_truc')
-        .insert(schedule)
+        .insert({ ...schedule, created_by: user?.id ?? null })
         .select()
         .single();
 

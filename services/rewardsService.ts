@@ -22,9 +22,10 @@ export const getRewards = async (page: number = 1, pageSize: number = 10) => {
 };
 
 export const createReward = async (reward: Omit<Reward, 'id' | 'created_at'>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('khen_thuong')
-        .insert(reward)
+        .insert({ ...reward, created_by: user?.id ?? null })
         .select()
         .single();
 

@@ -42,9 +42,10 @@ export const getCCHNRecords = async (): Promise<CCHNRecord[]> => {
 };
 
 export const createCCHNRecord = async (record: Partial<CCHN>) => {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
     const { data, error } = await supabase
         .from('cchn')
-        .insert([record])
+        .insert([{ ...record, created_by: user?.id ?? null }])
         .select()
         .single();
 
