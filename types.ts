@@ -35,6 +35,7 @@ export interface Employee {
   so_the_dang: string | null;
   ngay_cap_the_dang: string | null;
   doi_tuong: string | null;
+  created_by?: string | null;
   created_at?: string;
 }
 
@@ -54,6 +55,7 @@ export interface Schedule {
   nguoi_thuc_hien: string[]; // List of Employee IDs
   file_dinh_kem: string | null;
   trang_thai?: string;
+  created_by?: string | null;
   created_at?: string;
 }
 
@@ -69,6 +71,7 @@ export interface LeaveRecord {
   ly_do_nghi: string | null;
   noi_dang_ky_nghi: string | null;
   ghi_chu: string | null;
+  created_by?: string | null;
   created_at?: string;
 }
 
@@ -89,6 +92,7 @@ export interface AbsenceRecord {
   loai_nghi: string;
   ngay_nghi: string;
   ghi_chu: string | null;
+  created_by?: string | null;
   created_at?: string;
 }
 
@@ -120,6 +124,7 @@ export interface CardRecord {
   nguoi_ban_giao_tien_tra: string | null;
   ngay_ban_giao_tien_tra: string | null;
   trang_thai_tien_tra: string | null;
+  created_by?: string | null;
   created_at?: string;
 }
 
@@ -133,6 +138,7 @@ export interface Reward {
   qdkt: string | null;
   namkt: string;
   image: string | null;
+  created_by?: string | null;
   created_at?: string;
 }
 
@@ -145,6 +151,7 @@ export interface Decision {
   noi_dung: string;
   ghi_chu: string | null;
   file_quyet_dinh: string | null;
+  created_by?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -158,6 +165,7 @@ export interface Assignment {
   chay_ngoai: string | null;
   chup_phim: string | null;
   lam_so: string | null;
+  created_by?: string | null;
   created_at?: string;
   updated_at?: string;
 }

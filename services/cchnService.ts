@@ -11,6 +11,7 @@ export interface CCHN {
     ngay_het_han: string | null;
     anh_cchn: string | null;
     ghi_chu: string | null;
+    created_by: string | null;
     created_at: string;
 }
 

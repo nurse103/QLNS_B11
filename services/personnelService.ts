@@ -35,6 +35,7 @@ export interface Employee {
     danh_hieu: string | null;
     don_vi_id: number | null;
     chung_chi_hanh_nghe: string | null;
+    created_by?: string | null;
     created_at?: string;
 }
 
@@ -103,6 +104,7 @@ export interface Family {
     nghe_nghiep?: string;
     so_dien_thoai?: string;
     ghi_chu?: string;
+    created_by?: string | null;
 }
 
 export interface WorkHistory {
@@ -114,6 +116,7 @@ export interface WorkHistory {
     cap_bac?: string;
     chuc_vu?: string;
     ghi_chu?: string;
+    created_by?: string | null;
 }
 
 export interface Training {
@@ -130,6 +133,7 @@ export interface Training {
     cap_bac?: string;
     chuc_vu?: string;
     ghi_chu?: string;
+    created_by?: string | null;
 }
 
 export const getAllWorkHistory = async () => {
@@ -164,6 +168,7 @@ export interface Salary {
     hinh_thuc?: string;
     file_qd?: string;
     ghi_chu?: string;
+    created_by?: string | null;
 }
 
 export const getPersonnel = async () => {

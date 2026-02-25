@@ -258,6 +258,10 @@ export const Settings = () => {
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
                             <CardManagement />
                         </div>
+                    ) : activeTab === 'permissions' && userRole === 'admin' ? (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
+                            <PermissionSettings />
+                        </div>
                     ) : activeTab === 'menu' && userRole === 'admin' ? (
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
                             <h2 className="text-lg font-semibold text-slate-800 mb-2">Thứ tự hiển thị các menu trên Sidebar</h2>
