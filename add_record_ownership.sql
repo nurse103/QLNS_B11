@@ -13,16 +13,15 @@ DECLARE
         'qua_trinh_cong_tac', 
         'qua_trinh_dao_tao', 
         'gia_dinh', 
-        'nghi_phep', 
+        'quan_ly_phep',
         'quan_so_nghi', 
         'quan_ly_the_cham', 
         'cong_van', 
         'khen_thuong',
         'quyet_dinh',
-        'phan_cong_ngay',
+        'phan_cong',
         'lich_truc',
-        'lich_cong_tac',
-        'dm_the_cham'
+        'lich_cong_tac'
     ];
 BEGIN
     -- Get the first admin user to assign existing records to
