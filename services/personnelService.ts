@@ -53,7 +53,7 @@ const formatDateVN = (dateStr: string | undefined | null) => {
  * Sanitizes data by converting empty strings to null.
  * This prevents "invalid input syntax for type date" errors in Postgres.
  */
-const sanitizeData = <T>(data: T): T => {
+export const sanitizeData = <T>(data: T): T => {
     if (data === null || data === undefined) return data;
 
     if (typeof data === 'string') {
@@ -125,8 +125,10 @@ export interface Training {
     nganh_dao_tao?: string;
     trinh_do_dao_tao?: string;
     hinh_thuc_dao_tao?: string;
-    van_bang_chung_chi?: string;
+    anh_van_bang?: string;
     xep_loai_tot_nghiep?: string;
+    cap_bac?: string;
+    chuc_vu?: string;
     ghi_chu?: string;
 }
 
@@ -361,3 +363,39 @@ export const uploadPartyCardImage = async (file: File) => {
     return data.publicUrl;
 };
 
+/**
+ * Synchronizes the latest rank and position from history tables to the main dsnv table.
+ * @param dsnv_id The ID of the employee to sync.
+ */
+export const syncPersonnelCurrentStatus = async (dsnv_id: number) => {
+    try {
+        console.log(`Syncing current status for employee ID: ${dsnv_id}`);
+        
+        // Use Work History as the primary source for current rank and position
+        const { data: workHistory, error: workError } = await supabase
+            .from('qua_trinh_cong_tac')
+            .select('cap_bac, chuc_vu, tu_thang_nam')
+            .eq('dsnv_id', dsnv_id)
+            .order('tu_thang_nam', { ascending: false })
+            .limit(1);
+
+        if (workError) throw workError;
+
+        const latestWork = workHistory?.[0];
+
+        if (latestWork) {
+            const { error: updateError } = await supabase
+                .from('dsnv')
+                .update({
+                    cap_bac: latestWork.cap_bac,
+                    chuc_vu: latestWork.chuc_vu
+                })
+                .eq('id', dsnv_id);
+
+            if (updateError) throw updateError;
+            console.log(`Successfully synced for ${dsnv_id}: ${latestWork.cap_bac} - ${latestWork.chuc_vu}`);
+        }
+    } catch (err) {
+        console.error(`Failed to sync status for ${dsnv_id}:`, err);
+    }
+};

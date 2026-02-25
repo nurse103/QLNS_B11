@@ -520,7 +520,7 @@ export const PersonnelList = () => {
                                                 className="rounded border-slate-300 transform scale-125 accent-green-600"
                                             />
                                         </th>
-                                        <th className="px-6 py-3">Họ và tên / Cấp bậc / Chức vụ</th>
+                                        <th className="px-6 py-3">Họ và tên / Cấp bậc / Chức danh/Chức vụ</th>
                                         <th className="px-6 py-3">Ngày sinh / Giới tính</th>
                                         <th className="px-6 py-3">Đối tượng</th>
                                         <th className="px-6 py-3">Trạng thái</th>
@@ -643,7 +643,7 @@ export const PersonnelList = () => {
                                         {/* Row 2: Info Grid */}
                                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                                             <div>
-                                                <span className="text-slate-400 block mb-0.5">Cấp bậc/Chức vụ:</span>
+                                                <span className="text-slate-400 block mb-0.5">Cấp bậc / Chức danh/Chức vụ:</span>
                                                 <span className="font-medium text-slate-700">{employee.cap_bac || '-'} / {employee.chuc_vu || '-'}</span>
                                             </div>
                                             <div>
@@ -850,7 +850,7 @@ export const PersonnelList = () => {
                                                         <input type="text" name="cap_bac" value={formData.cap_bac || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <label className="text-sm font-medium text-slate-700">Chức vụ</label>
+                                                        <label className="text-sm font-medium text-slate-700">Chức danh/Chức vụ</label>
                                                         <input type="text" name="chuc_vu" value={formData.chuc_vu || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
                                                     <div className="space-y-2">
@@ -1022,7 +1022,25 @@ export const PersonnelList = () => {
                                                 <div className="col-span-1 md:col-span-2"><h4 className="text-sm font-bold text-slate-800">Thêm thành viên mới</h4></div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Mối quan hệ</label>
-                                                    <input type="text" value={tempFamily.moi_quan_he || ''} onChange={e => setTempFamily({ ...tempFamily, moi_quan_he: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Vợ/Con/Bố/Mẹ..." />
+                                                    <input
+                                                        list="relationship-options-personnel"
+                                                        type="text"
+                                                        value={tempFamily.moi_quan_he || ''}
+                                                        onChange={e => setTempFamily({ ...tempFamily, moi_quan_he: e.target.value })}
+                                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        placeholder="Vợ/Con/Bố/Mẹ..."
+                                                    />
+                                                    <datalist id="relationship-options-personnel">
+                                                        <option value="Vợ" />
+                                                        <option value="Chồng" />
+                                                        <option value="Con" />
+                                                        <option value="Bố đẻ" />
+                                                        <option value="Mẹ đẻ" />
+                                                        <option value="Bố chồng" />
+                                                        <option value="Mẹ chồng" />
+                                                        <option value="Bố vợ" />
+                                                        <option value="Mẹ vợ" />
+                                                    </datalist>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Họ và tên</label>

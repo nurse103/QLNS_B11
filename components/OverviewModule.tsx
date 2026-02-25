@@ -5,6 +5,7 @@ import { getAbsencesByDate } from '../services/absenceService';
 import { getLeavesOnDate } from '../services/leaveService';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { getAssignmentByDate } from '../services/assignmentService';
+import { getCCHNRecords, CCHNRecord } from '../services/cchnService';
 import { Schedule, AbsenceRecord, LeaveRecord, Assignment } from '../types';
 import {
     Calendar,
@@ -19,7 +20,8 @@ import {
     UserCheck,
     Stethoscope,
     Heart,
-    X
+    X,
+    BadgeCheck
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -30,6 +32,7 @@ export const OverviewModule = () => {
     const [dutySchedules, setDutySchedules] = useState<DutySchedule[]>([]);
     const [absences, setAbsences] = useState<AbsenceRecord[]>([]);
     const [todayAssignment, setTodayAssignment] = useState<Assignment | null>(null);
+    const [cchnRecords, setCchnRecords] = useState<CCHNRecord[]>([]);
     const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
 
     useEffect(() => {
@@ -40,19 +43,21 @@ export const OverviewModule = () => {
                 const currentMonth = today.getMonth() + 1;
                 const currentYear = today.getFullYear();
 
-                const [pData, wData, dData, aData, lData, assData] = await Promise.all([
+                const [pData, wData, dData, aData, lData, assData, cchnData] = await Promise.all([
                     getPersonnel(),
                     getSchedules(),
                     getDutySchedules(currentMonth, currentYear),
                     getAbsencesByDate(new Date().toISOString().split('T')[0]),
                     getLeavesOnDate(new Date().toISOString().split('T')[0]),
-                    getAssignmentByDate(new Date().toISOString().split('T')[0])
+                    getAssignmentByDate(new Date().toISOString().split('T')[0]),
+                    getCCHNRecords()
                 ]);
 
                 setPersonnel(pData || []);
                 setWorkSchedules(wData || []);
                 setDutySchedules(dData || []);
                 setTodayAssignment(assData);
+                setCchnRecords(cchnData || []);
 
                 // Merge absences (Daily) and leaves (Long-term/Tranh thu)
                 // Map LeaveRecord to AbsenceRecord format for display
@@ -256,14 +261,28 @@ export const OverviewModule = () => {
             doctors: doctors.length,
             nurses: nurses.length,
             traineeNurses: traineeNurses.length,
-            residents: residents.length
+            residents: residents.length,
+            officers: activePersonnel.filter(p => p.doi_tuong === 'Sỹ quan' || p.doi_tuong === 'Sĩ quan').length,
+            qncn: activePersonnel.filter(p => p.doi_tuong === 'QNCN').length,
+            ldhd: activePersonnel.filter(p => p.doi_tuong === 'LĐHĐ').length
         },
         party: {
             total: activePartyMembers.length,
             doctorCell: doctorPartyMembers.length,
             nurseCell: nursePartyMembers.length
+        },
+        cchn: {
+            hasCCHN: 0,
+            noCCHN: 0
         }
     };
+
+    // Calculate CCHN Stats
+    const personnelIdsWithCCHN = new Set(cchnRecords.map(r => r.dsnv_id));
+    const activeWithCCHN = activePersonnel.filter(p => personnelIdsWithCCHN.has(p.id!));
+
+    stats.cchn.hasCCHN = activeWithCCHN.length;
+    stats.cchn.noCCHN = activePersonnel.length - activeWithCCHN.length;
 
 
     if (loading) return <div className="p-8 text-center text-slate-500">Đang tải dữ liệu tổng quan...</div>;
@@ -509,32 +528,41 @@ export const OverviewModule = () => {
             {/* Row 2: Personnel Stats */}
             <div>
                 <h3 className="text-sm font-bold text-blue-700 uppercase tracking-wider mb-3 ml-1">Thống kê nhân sự</h3>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
                             <Users size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500">Tổng số nhân sự</p>
+                            <p className="text-xs text-slate-500">Tổng nhân sự</p>
                             <p className="text-xl font-bold text-slate-800">{stats.personnel.total}</p>
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                            <Heart size={20} />
+                        <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                            <BadgeCheck size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500">Điều dưỡng</p>
-                            <p className="text-xl font-bold text-slate-800">{stats.personnel.nurses}</p>
+                            <p className="text-xs text-slate-500">Sỹ quan</p>
+                            <p className="text-xl font-bold text-slate-800">{stats.personnel.officers}</p>
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center shrink-0">
-                            <Activity size={20} />
+                        <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                            <BadgeCheck size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500">ĐD học việc</p>
-                            <p className="text-xl font-bold text-slate-800">{stats.personnel.traineeNurses}</p>
+                            <p className="text-xs text-slate-500">QNCN</p>
+                            <p className="text-xl font-bold text-slate-800">{stats.personnel.qncn}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                            <Briefcase size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500">LĐHĐ</p>
+                            <p className="text-xl font-bold text-slate-800">{stats.personnel.ldhd}</p>
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
@@ -547,12 +575,39 @@ export const OverviewModule = () => {
                         </div>
                     </div>
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                            <Heart size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500">Điều dưỡng</p>
+                            <p className="text-xl font-bold text-slate-800">{stats.personnel.nurses}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
                             <UserCheck size={20} />
                         </div>
                         <div>
-                            <p className="text-xs text-slate-500">Học viên nội trú</p>
+                            <p className="text-xs text-slate-500">HV nội trú</p>
                             <p className="text-xl font-bold text-slate-800">{stats.personnel.residents}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3 border-l-4 border-l-blue-500">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                            <FileText size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500">Đã có CCHN</p>
+                            <p className="text-xl font-bold text-blue-600">{stats.cchn.hasCCHN}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3 border-l-4 border-l-orange-500">
+                        <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                            <X size={20} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500">Chưa có CCHN</p>
+                            <p className="text-xl font-bold text-orange-600">{stats.cchn.noCCHN}</p>
                         </div>
                     </div>
                 </div>
@@ -741,71 +796,73 @@ export const OverviewModule = () => {
                         )}
                     </div>
                 </div>
-            </div>
-            {/* Daily Assignment Detail Modal */}
-            {isAssignmentModalOpen && todayAssignment && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center md:p-4 animate-in fade-in duration-200">
-                    <div className="bg-white md:rounded-2xl rounded-none shadow-2xl w-full max-w-lg h-full md:h-auto overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
-                        <div className="px-6 py-4 bg-[#009900] flex justify-between items-center shrink-0">
-                            <h2 className="text-lg font-bold text-white uppercase tracking-wide">Chi tiết phân công hôm nay</h2>
-                            <button
-                                onClick={() => setIsAssignmentModalOpen(false)}
-                                className="text-white/80 hover:text-white transition-colors"
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-                        <div className="p-4 md:p-6 flex-1 overflow-y-auto">
-                            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
-                                <Calendar className="text-blue-600" size={20} />
-                                <span className="font-bold text-slate-700">
-                                    {new Date(todayAssignment.ngay_thang).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                                {[
-                                    { label: 'Buồng 1', value: todayAssignment.buong_1, iconColor: 'bg-blue-100 text-blue-600' },
-                                    { label: 'Buồng 2', value: todayAssignment.buong_2, iconColor: 'bg-green-100 text-green-600' },
-                                    { label: 'Buồng 3', value: todayAssignment.buong_3, iconColor: 'bg-purple-100 text-purple-600' },
-                                    { label: 'Buồng 4', value: todayAssignment.buong_4, iconColor: 'bg-orange-100 text-orange-600' },
-                                    { label: 'Chạy ngoài', value: todayAssignment.chay_ngoai, iconColor: 'bg-pink-100 text-pink-600' },
-                                    { label: 'Chụp phim', value: todayAssignment.chup_phim, iconColor: 'bg-indigo-100 text-indigo-600' },
-                                    { label: 'Làm số', value: todayAssignment.lam_so, iconColor: 'bg-amber-100 text-amber-600' }
-                                ].map((item, idx) => item.value && (
-                                    <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white transition-colors hover:shadow-sm">
-                                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${item.iconColor} flex items-center justify-center shrink-0 font-bold text-[10px] md:text-xs`}>
-                                            {idx < 4 ? `B${idx + 1}` : item.label.charAt(0)}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-0.5 truncate">{item.label}</p>
-                                            <p className="text-slate-800 font-bold text-sm md:text-base truncate">{item.value}</p>
-                                        </div>
+                {/* Daily Assignment Detail Modal */}
+                {
+                    isAssignmentModalOpen && todayAssignment && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center md:p-4 animate-in fade-in duration-200">
+                            <div className="bg-white md:rounded-2xl rounded-none shadow-2xl w-full max-w-lg h-full md:h-auto overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+                                <div className="px-6 py-4 bg-[#009900] flex justify-between items-center shrink-0">
+                                    <h2 className="text-lg font-bold text-white uppercase tracking-wide">Chi tiết phân công hôm nay</h2>
+                                    <button
+                                        onClick={() => setIsAssignmentModalOpen(false)}
+                                        className="text-white/80 hover:text-white transition-colors"
+                                    >
+                                        <X size={24} />
+                                    </button>
+                                </div>
+                                <div className="p-4 md:p-6 flex-1 overflow-y-auto">
+                                    <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
+                                        <Calendar className="text-blue-600" size={20} />
+                                        <span className="font-bold text-slate-700">
+                                            {new Date(todayAssignment.ngay_thang).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                        </span>
                                     </div>
-                                ))}
-                            </div>
 
-                            <div className="mt-8 md:block hidden">
-                                <button
-                                    onClick={() => setIsAssignmentModalOpen(false)}
-                                    className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
-                                >
-                                    Đóng cửa sổ
-                                </button>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                                        {[
+                                            { label: 'Buồng 1', value: todayAssignment.buong_1, iconColor: 'bg-blue-100 text-blue-600' },
+                                            { label: 'Buồng 2', value: todayAssignment.buong_2, iconColor: 'bg-green-100 text-green-600' },
+                                            { label: 'Buồng 3', value: todayAssignment.buong_3, iconColor: 'bg-purple-100 text-purple-600' },
+                                            { label: 'Buồng 4', value: todayAssignment.buong_4, iconColor: 'bg-orange-100 text-orange-600' },
+                                            { label: 'Chạy ngoài', value: todayAssignment.chay_ngoai, iconColor: 'bg-pink-100 text-pink-600' },
+                                            { label: 'Chụp phim', value: todayAssignment.chup_phim, iconColor: 'bg-indigo-100 text-indigo-600' },
+                                            { label: 'Làm số', value: todayAssignment.lam_so, iconColor: 'bg-amber-100 text-amber-600' }
+                                        ].map((item, idx) => item.value && (
+                                            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white transition-colors hover:shadow-sm">
+                                                <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${item.iconColor} flex items-center justify-center shrink-0 font-bold text-[10px] md:text-xs`}>
+                                                    {idx < 4 ? `B${idx + 1}` : item.label.charAt(0)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-[9px] md:text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-0.5 truncate">{item.label}</p>
+                                                    <p className="text-slate-800 font-bold text-sm md:text-base truncate">{item.value}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8 md:block hidden">
+                                        <button
+                                            onClick={() => setIsAssignmentModalOpen(false)}
+                                            className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+                                        >
+                                            Đóng cửa sổ
+                                        </button>
+                                    </div>
+                                </div>
+                                {/* Mobile Footer Button */}
+                                <div className="p-4 md:hidden border-t border-slate-100 bg-slate-50 shrink-0">
+                                    <button
+                                        onClick={() => setIsAssignmentModalOpen(false)}
+                                        className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold active:scale-95 transition-all"
+                                    >
+                                        Đóng cửa sổ
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        {/* Mobile Footer Button */}
-                        <div className="p-4 md:hidden border-t border-slate-100 bg-slate-50 shrink-0">
-                            <button
-                                onClick={() => setIsAssignmentModalOpen(false)}
-                                className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold active:scale-95 transition-all"
-                            >
-                                Đóng cửa sổ
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+                    )
+                }
+            </div>
+        </div >
     );
 };

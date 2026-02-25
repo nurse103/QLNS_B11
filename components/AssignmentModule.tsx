@@ -203,15 +203,6 @@ export const AssignmentModule = () => {
             .some(val => val?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
-    // Logic for Filtering Staff
-    const getExcludedFromPrevDay = () => {
-        if (!prevDayDuty) return [];
-        // Extract names from dieu_duong and phu_dieu_duong
-        const dd = prevDayDuty.dieu_duong ? prevDayDuty.dieu_duong.split(', ') : [];
-        const pdd = prevDayDuty.phu_dieu_duong ? prevDayDuty.phu_dieu_duong.split(', ') : [];
-        return [...dd, ...pdd];
-    };
-
     const getFullExclusionFromPrevDay = () => {
         if (!prevDayDuty) return [];
         return [
@@ -226,15 +217,9 @@ export const AssignmentModule = () => {
     const getAvailableStaff = (currentField: keyof Assignment, previousSelections: string[]) => {
         let staff = allPersonnel.map(p => p.ho_va_ten);
 
-        // Rule: If "Làm số", only exclude full kíp trực hôm trước
-        if (currentField === 'lam_so') {
-            const fullExcluded = getFullExclusionFromPrevDay();
-            return staff.filter(name => !fullExcluded.includes(name));
-        }
-
-        // Rule: For rooms and others, exclude nursing duty from prev day
-        const nursingExcluded = getExcludedFromPrevDay();
-        staff = staff.filter(name => !nursingExcluded.includes(name));
+        // Rule: For rooms and others, exclude full duty team from prev day
+        const fullExcluded = getFullExclusionFromPrevDay();
+        staff = staff.filter(name => !fullExcluded.includes(name));
 
         // Rule: Exclude already selected staff in sequential logic
         // Buồng 1 -> Buồng 2 -> Buồng 3 -> Buồng 4 -> Chạy ngoài -> Chụp phim
@@ -490,7 +475,7 @@ export const AssignmentModule = () => {
                                     <MultiSelect
                                         label="Làm số"
                                         value={formData.lam_so || ''}
-                                        options={getAvailableStaff('lam_so', [])} // Only excluded by full prev kíp
+                                        options={getAvailableStaff('lam_so', getSelections(['chup_phim', 'chay_ngoai']))}
                                         onChange={(val) => setFormData(prev => ({ ...prev, lam_so: val }))}
                                     />
                                 </div>
