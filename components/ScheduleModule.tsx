@@ -37,36 +37,59 @@ export const ScheduleModule = () => {
     // Nurse Multi-select Helper
     const [nurseSearch, setNurseSearch] = useState('');
 
-    // Compute which month/year to fetch based on the active filter
-    const getMonthYearForFilter = (type: string) => {
+    // Compute the Mon-Sun bounds of a week (offset = 0 current, -1 prev, +1 next)
+    const computeWeekBounds = (offset: number = 0) => {
         const now = new Date();
-        if (type === 'prev_month') {
-            const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            return { month: d.getMonth() + 1, year: d.getFullYear() };
-        }
-        if (type === 'prev_week') {
-            const d = new Date(now);
-            d.setDate(d.getDate() - 7);
-            return { month: d.getMonth() + 1, year: d.getFullYear() };
-        }
-        if (type === 'next_week') {
-            const d = new Date(now);
-            d.setDate(d.getDate() + 7);
-            return { month: d.getMonth() + 1, year: d.getFullYear() };
-        }
-        // all, today, week, month, custom — use current month/year
-        return { month: now.getMonth() + 1, year: now.getFullYear() };
+        now.setDate(now.getDate() + offset * 7);
+        const day = now.getDay();
+        const diffToMon = day === 0 ? -6 : 1 - day;
+        const start = new Date(now);
+        start.setDate(now.getDate() + diffToMon);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return {
+            start: start.toISOString().split('T')[0],
+            end: end.toISOString().split('T')[0],
+            startMonth: start.getMonth() + 1,
+            startYear: start.getFullYear(),
+            endMonth: end.getMonth() + 1,
+            endYear: end.getFullYear(),
+        };
     };
 
     const fetchData = async (filter?: string) => {
         setLoading(true);
         const activeFilter = filter ?? filterType;
-        const { month, year } = getMonthYearForFilter(activeFilter);
+        const now = new Date();
         try {
-            const [scheduleData, employeeData] = await Promise.all([
-                getDutySchedules(month, year),
-                getPersonnel()
-            ]);
+            let scheduleData: DutySchedule[] = [];
+            const employeePromise = getPersonnel();
+
+            if (activeFilter === 'week' || activeFilter === 'prev_week' || activeFilter === 'next_week') {
+                const offset = activeFilter === 'prev_week' ? -1 : activeFilter === 'next_week' ? 1 : 0;
+                const bounds = computeWeekBounds(offset);
+                if (bounds.startMonth === bounds.endMonth && bounds.startYear === bounds.endYear) {
+                    // Week falls within a single month
+                    scheduleData = await getDutySchedules(bounds.startMonth, bounds.startYear);
+                } else {
+                    // Week spans two months — fetch both and merge
+                    const [m1, m2] = await Promise.all([
+                        getDutySchedules(bounds.startMonth, bounds.startYear),
+                        getDutySchedules(bounds.endMonth, bounds.endYear),
+                    ]);
+                    scheduleData = [...m1, ...m2];
+                }
+            } else if (activeFilter === 'prev_month') {
+                const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                scheduleData = await getDutySchedules(d.getMonth() + 1, d.getFullYear());
+            } else if (activeFilter === 'today') {
+                scheduleData = await getDutySchedules(now.getMonth() + 1, now.getFullYear());
+            } else {
+                // 'all' and 'month' and 'custom' — fetch current month
+                scheduleData = await getDutySchedules(now.getMonth() + 1, now.getFullYear());
+            }
+
+            const [, employeeData] = await Promise.all([Promise.resolve(), employeePromise]);
             setSchedules(scheduleData || []);
             setEmployees(employeeData || []);
         } catch (error) {
@@ -105,18 +128,8 @@ export const ScheduleModule = () => {
         const todayStr = now.toISOString().split('T')[0];
 
         const getWeekBounds = (offset: number = 0) => {
-            const d = new Date(now);
-            d.setDate(d.getDate() + offset * 7);
-            const day = d.getDay();
-            const diffToMon = day === 0 ? -6 : 1 - day;
-            const start = new Date(d);
-            start.setDate(d.getDate() + diffToMon);
-            const end = new Date(start);
-            end.setDate(start.getDate() + 6);
-            return {
-                start: start.toISOString().split('T')[0],
-                end: end.toISOString().split('T')[0]
-            };
+            const bounds = computeWeekBounds(offset);
+            return { start: bounds.start, end: bounds.end };
         };
 
         if (filterType === 'today') {
@@ -169,6 +182,14 @@ export const ScheduleModule = () => {
         setCustomDateFrom('');
         setCustomDateTo('');
         fetchData(type);
+    };
+
+    const handleClearFilter = () => {
+        setFilterType('all');
+        setCustomDateFrom('');
+        setCustomDateTo('');
+        setSearchTerm('');
+        fetchData('all');
     };
 
     const handleEdit = (item: DutySchedule) => {
@@ -343,6 +364,11 @@ export const ScheduleModule = () => {
                             <button onClick={() => handleQuickFilter('prev_month')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'prev_month' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tháng trước</button>
                             <button onClick={() => handleQuickFilter('month')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'month' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tháng này</button>
                             <button onClick={() => setFilterType('custom')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'custom' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tùy chọn</button>
+                            {filterType !== 'all' && (
+                                <button onClick={handleClearFilter} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1">
+                                    <X size={14} /> Hủy lọc
+                                </button>
+                            )}
                         </div>
 
                         {/* Custom Range & Search */}
