@@ -155,16 +155,19 @@ export interface Decision {
   created_at?: string;
   updated_at?: string;
 }
-export interface Assignment {
+
+export interface NCKH {
   id: string;
-  ngay_thang: string;
-  buong_1: string | null;
-  buong_2: string | null;
-  buong_3: string | null;
-  buong_4: string | null;
-  chay_ngoai: string | null;
-  chup_phim: string | null;
-  lam_so: string | null;
+  dsnv_id: number;
+  ho_va_ten?: string;
+  ten_de_tai: string;
+  cap_quan_ly: string;
+  ngay_bat_dau: string;
+  ngay_ket_thuc: string;
+  trang_thai: 'Đang thực hiện' | 'Đã nghiệm thu';
+  ket_qua: string | null;
+  vai_tro: string;
+  minh_chung: string[];
   created_by?: string | null;
   created_at?: string;
   updated_at?: string;

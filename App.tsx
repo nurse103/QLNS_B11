@@ -52,6 +52,7 @@ import { PersonnelList } from './components/PersonnelList';
 import { WorkHistoryModule } from './components/WorkHistoryModule';
 import { TrainingHistoryModule } from './components/TrainingHistoryModule';
 import { CCHNModule } from './components/CCHNModule';
+import { NCKHModule } from './components/NCKHModule';
 import { usePermissions } from './hooks/usePermissions';
 import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
@@ -923,6 +924,7 @@ function App() {
               <Route path="/quan-so-nghi" element={<AbsenceModule />} />
               <Route path="/patient-cards" element={<PatientCardModule />} />
               <Route path="/cong-van" element={<CongVanModule />} />
+              <Route path="/research/topics" element={<NCKHModule />} />
               <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
               <Route path="/rewards" element={<RewardsModule />} />
               <Route path="/assignments" element={<AssignmentModule />} />
