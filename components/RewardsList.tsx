@@ -170,12 +170,21 @@ export const RewardsList = () => {
         const templateData = [
             {
                 'Loại': 'Khen thưởng',
-                'Năm': 2024,
-                'Hình thức': 'Huân chương Chiến công',
+                'Ngày ký': '22/12/2024',
+                'Hình thức': 'Huân chương Chiến công Hạng Nhì',
                 'Đơn vị / Cá nhân': 'Khoa Hồi sức ngoại',
+                'Cấp quyết định': 'Chủ tịch nước',
+                'Nội dung / Lý do': 'Thành tích xuất sắc trong công tác cấp cứu điều trị',
+                'Số quyết định': '123/QD-CTN'
+            },
+            {
+                'Loại': 'Kỷ luật',
+                'Ngày ký': '15/05/2024',
+                'Hình thức': 'Khai trừ khỏi Đảng',
+                'Đơn vị / Cá nhân': 'Nguyễn Văn A',
                 'Cấp quyết định': 'Cấp Bộ',
-                'Nội dung / Lý do': 'Thành tích xuất sắc trong công tác chuyên môn',
-                'Số quyết định': '123/QD-BQP'
+                'Nội dung / Lý do': 'Vi phạm kỷ luật nghiêm trọng',
+                'Số quyết định': '456/QD-BQP'
             }
         ];
 
@@ -193,14 +202,42 @@ export const RewardsList = () => {
         reader.onload = async (event) => {
             try {
                 const bstr = event.target?.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws) as any[];
 
+                const parseExcelDate = (dateVal: any) => {
+                    if (!dateVal) return new Date().toISOString().split('T')[0];
+
+                    if (dateVal instanceof Date) {
+                        return dateVal.toISOString().split('T')[0];
+                    }
+
+                    if (typeof dateVal === 'number') {
+                        // Excel serial number
+                        const d = new Date((dateVal - 25569) * 86400 * 1000);
+                        return d.toISOString().split('T')[0];
+                    }
+
+                    if (typeof dateVal === 'string') {
+                        // Handle DD/MM/YYYY
+                        const ddmmyyyy = dateVal.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                        if (ddmmyyyy) {
+                            return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`;
+                        }
+                        // Handle standard YYYY-MM-DD
+                        if (dateVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+                            return dateVal.split('T')[0];
+                        }
+                    }
+
+                    return new Date().toISOString().split('T')[0];
+                };
+
                 const formattedData = data.map(item => ({
                     loaikt: item['Loại'] || 'Khen thưởng',
-                    namkt: item['Ngày ký'] || item['Năm'] || new Date().toISOString().split('T')[0],
+                    namkt: parseExcelDate(item['Ngày ký'] || item['Năm']),
                     htkt: item['Hình thức'] || '',
                     dv: item['Đơn vị / Cá nhân'] || '',
                     capkt: item['Cấp quyết định'] || '',
@@ -210,7 +247,7 @@ export const RewardsList = () => {
                 })).filter(item => item.htkt && item.dv);
 
                 if (formattedData.length === 0) {
-                    alert("Không có dữ liệu hợp lệ để nhập!");
+                    alert("Không có dữ liệu hợp lệ để nhập! Vui lòng kiểm tra các cột Hình thức và Đơn vị / Cá nhân.");
                     return;
                 }
 
@@ -221,7 +258,7 @@ export const RewardsList = () => {
                 }
             } catch (error) {
                 console.error("Import failed:", error);
-                alert("Lỗi khi nhập tệp Excel!");
+                alert("Lỗi khi nhập tệp Excel! Vui lòng kiểm tra định dạng dữ liệu.");
             }
         };
         reader.readAsBinaryString(file);
