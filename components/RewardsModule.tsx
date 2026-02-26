@@ -14,18 +14,18 @@ export const RewardsModule = () => {
                 <p className="text-slate-500">Quản lý danh sách và quyết định khen thưởng, kỷ luật</p>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-slate-200 mb-6 overflow-x-auto">
+            {/* Button Group (Pill style) */}
+            <div className="flex bg-slate-200/60 p-1 rounded-xl w-fit mb-6 gap-1">
                 <button
                     onClick={() => setActiveTab('rewards')}
-                    className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'rewards' ? 'border-b-2 border-[#009900] text-[#009900]' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'rewards' ? 'bg-white text-[#009900] shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
                 >
                     <Award size={18} />
                     Khen thưởng & Kỷ luật
                 </button>
                 <button
                     onClick={() => setActiveTab('decisions')}
-                    className={`px-6 py-3 text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'decisions' ? 'border-b-2 border-[#009900] text-[#009900]' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'decisions' ? 'bg-white text-[#009900] shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
                 >
                     <FileText size={18} />
                     Quyết định KT/KL
