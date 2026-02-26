@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { DutySchedule, getDutySchedules, createDutySchedule, updateDutySchedule, deleteDutySchedule } from '../services/dutyScheduleService';
+import { DutySchedule, getDutySchedules, createDutySchedule, updateDutySchedule, deleteDutySchedule, bulkCreateDutySchedules } from '../services/dutyScheduleService';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { Plus, Search, Calendar as CalendarIcon, Edit, Trash2, FileSpreadsheet, Download, Upload, X, Save, ChevronLeft, ChevronRight, Filter, BarChart3, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -209,31 +209,63 @@ export const ScheduleModule = () => {
         const reader = new FileReader();
         reader.onload = async (evt) => {
             const bstr = evt.target?.result;
-            const wb = XLSX.read(bstr, { type: 'binary' });
+            const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
             const ws = wb.Sheets[wb.SheetNames[0]];
             const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
             const rows = data.slice(1) as any[];
+
+            const parseDate = (val: any): string | null => {
+                if (!val) return null;
+                // If it's already a Date object (from cellDates: true)
+                if (val instanceof Date) {
+                    const y = val.getFullYear();
+                    const m = String(val.getMonth() + 1).padStart(2, '0');
+                    const d = String(val.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                }
+                // If it's a string already in YYYY-MM-DD or DD/MM/YYYY
+                if (typeof val === 'string') {
+                    // Try to detect dd/mm/yyyy
+                    const parts = val.split('/');
+                    if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    return val; // Assume already YYYY-MM-DD
+                }
+                // If it's an Excel serial number (number)
+                if (typeof val === 'number') {
+                    const parsed = XLSX.SSF.parse_date_code(val);
+                    if (parsed) {
+                        const m = String(parsed.m).padStart(2, '0');
+                        const d = String(parsed.d).padStart(2, '0');
+                        return `${parsed.y}-${m}-${d}`;
+                    }
+                }
+                return null;
+            };
+
             const newSchedules = rows.map(row => ({
-                ngay_truc: row[0],
-                bac_sy: row[1],
-                sau_dai_hoc: row[2],
-                dieu_duong: row[3],
-                phu_dieu_duong: row[4],
-                ghi_chu: row[5]
+                ngay_truc: parseDate(row[0]),
+                bac_sy: row[1] || null,
+                sau_dai_hoc: row[2] || null,
+                dieu_duong: row[3] || null,
+                phu_dieu_duong: row[4] || null,
+                ghi_chu: row[5] || null
             })).filter(s => s.ngay_truc);
 
             if (newSchedules.length > 0) {
                 try {
-                    const { bulkCreateDutySchedules } = require('../services/dutyScheduleService');
-                    await bulkCreateDutySchedules(newSchedules);
-                    alert(`Đã import ${newSchedules.length} dòng.`);
+                    await bulkCreateDutySchedules(newSchedules as any);
+                    alert(`Đã import ${newSchedules.length} dòng thành công!`);
                     fetchData();
                 } catch (err: any) {
-                    alert("Lỗi import: " + err.message);
+                    alert("Lỗi import: " + (err.message || JSON.stringify(err)));
                 }
+            } else {
+                alert("Không có dòng dữ liệu hợp lệ nào trong file. Hãy kiểm tra lại định dạng ngày (YYYY-MM-DD).");
             }
         };
         reader.readAsBinaryString(file);
+        // Reset input so same file can be re-imported
+        e.target.value = '';
     };
 
     // Lists for dropdown
