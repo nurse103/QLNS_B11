@@ -40,13 +40,37 @@ export const OverviewModule = () => {
             setLoading(true);
             try {
                 const today = new Date();
-                const currentMonth = today.getMonth() + 1;
-                const currentYear = today.getFullYear();
+
+                // Determine current week's months to ensure full Mon-Sun coverage
+                const day = today.getDay();
+                const diffToMon = day === 0 ? -6 : 1 - day;
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() + diffToMon);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+                const startMonth = startOfWeek.getMonth() + 1;
+                const startYear = startOfWeek.getFullYear();
+                const endMonth = endOfWeek.getMonth() + 1;
+                const endYear = endOfWeek.getFullYear();
+
+                // Fetch duty schedules. If week spans two months, fetch both.
+                const fetchDutyData = async () => {
+                    if (startMonth === endMonth && startYear === endYear) {
+                        return getDutySchedules(startMonth, startYear);
+                    } else {
+                        const [m1, m2] = await Promise.all([
+                            getDutySchedules(startMonth, startYear),
+                            getDutySchedules(endMonth, endYear)
+                        ]);
+                        return [...(m1 || []), ...(m2 || [])];
+                    }
+                };
 
                 const [pData, wData, dData, aData, lData, assData, cchnData] = await Promise.all([
                     getPersonnel(),
                     getSchedules(),
-                    getDutySchedules(currentMonth, currentYear),
+                    fetchDutyData(),
                     getAbsencesByDate(new Date().toISOString().split('T')[0]),
                     getLeavesOnDate(new Date().toISOString().split('T')[0]),
                     getAssignmentByDate(new Date().toISOString().split('T')[0]),
@@ -124,11 +148,17 @@ export const OverviewModule = () => {
 
     const isThisWeek = (dateString: string) => {
         if (!dateString) return false;
-        const current = new Date();
-        const startOfWeek = new Date(current.setDate(current.getDate() - current.getDay() + (current.getDay() === 0 ? -6 : 1)));
+        const now = new Date();
+
+        // Find Monday of the current week
+        const day = now.getDay();
+        const diffToMon = day === 0 ? -6 : 1 - day;
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() + diffToMon);
         startOfWeek.setHours(0, 0, 0, 0);
+
         const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
 
         const checkDate = new Date(dateString);
