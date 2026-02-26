@@ -26,7 +26,8 @@ import {
     FileDown,
     Upload,
     ShieldCheck,
-    AlertCircle
+    AlertCircle,
+    Copy
 } from 'lucide-react';
 import { Reward, Employee } from '../types';
 import { usePermissions } from '../hooks/usePermissions';
@@ -144,11 +145,20 @@ export const RewardsList = () => {
         }
     };
 
+    const handleClone = (reward: Reward) => {
+        const { id, created_at, ...clonedData } = reward;
+        setFormData({
+            ...clonedData,
+            targetType: clonedData.dv === 'Khoa Hồi sức ngoại' ? 'unit' : 'individual'
+        });
+        setIsModalOpen(true);
+    };
+
     const handleAddNew = () => {
         setFormData({
             loaikt: 'Khen thưởng',
             namkt: new Date().toISOString().split('T')[0],
-            capkt: 'Cấp Bộ',
+            capkt: '', // Removed default 'Cấp Bộ'
             dv: 'Khoa Hồi sức ngoại',
             targetType: 'unit'
         });
@@ -352,6 +362,15 @@ export const RewardsList = () => {
                                     <h3 className="font-bold text-slate-900">{reward.htkt}</h3>
                                 </div>
                                 <div className="flex gap-2">
+                                    {can_add && (
+                                        <button
+                                            onClick={() => handleClone(reward)}
+                                            className="p-1.5 bg-blue-50 rounded text-blue-500 hover:bg-blue-100 transition-colors"
+                                            title="Sao chép bản ghi này"
+                                        >
+                                            <Copy size={16} />
+                                        </button>
+                                    )}
                                     {can_edit && (
                                         <button
                                             onClick={() => handleEdit(reward)}
@@ -441,6 +460,11 @@ export const RewardsList = () => {
                                                     <a href={reward.image} target="_blank" rel="noreferrer" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Xem đính kèm">
                                                         <Paperclip size={14} />
                                                     </a>
+                                                )}
+                                                {can_add && (
+                                                    <button onClick={() => handleClone(reward)} className="p-2 hover:bg-blue-50 rounded-lg text-slate-400 hover:text-blue-600 transition-all active:scale-90" title="Sao chép">
+                                                        <Copy size={16} />
+                                                    </button>
                                                 )}
                                                 {can_edit && (
                                                     <button onClick={() => handleEdit(reward)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-all active:scale-90" title="Chỉnh sửa">
