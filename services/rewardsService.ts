@@ -1,13 +1,21 @@
 import { supabase } from './supabaseClient';
 import { Reward } from '../types';
 
-export const getRewards = async (page: number = 1, pageSize: number = 10) => {
+export const getRewards = async (page: number = 1, pageSize: number = 10, searchTerm: string = '') => {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, error, count } = await supabase
+    let query = supabase
         .from('khen_thuong')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact' });
+
+    if (searchTerm) {
+        // Search across multiple columns
+        query = query.or(`dv.ilike.%${searchTerm}%,htkt.ilike.%${searchTerm}%,ldkt.ilike.%${searchTerm}%,qdkt.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error, count } = await query
+        .order('namkt', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, to);
 

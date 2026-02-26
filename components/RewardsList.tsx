@@ -48,11 +48,25 @@ export const RewardsList = () => {
     const [pageSize] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
 
+    // Debounced search term
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+            setPage(1); // Reset to page 1 on search
+        }, 500);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [searchTerm]);
+
     // Fetch Data
     const fetchData = async () => {
         setLoading(true);
         try {
-            const { data, totalCount } = await getRewards(page, pageSize);
+            const { data, totalCount } = await getRewards(page, pageSize, debouncedSearchTerm);
             setRewards(data);
             setTotalCount(totalCount);
         } catch (error) {
@@ -64,7 +78,7 @@ export const RewardsList = () => {
 
     useEffect(() => {
         fetchData();
-    }, [page]);
+    }, [page, debouncedSearchTerm]);
 
     useEffect(() => {
         const fetchPersonnel = async () => {
@@ -269,16 +283,8 @@ export const RewardsList = () => {
     // Total Pages
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    // Filter Logic
-    const filteredRewards = rewards.filter(r => {
-        const search = searchTerm.toLowerCase();
-        return (
-            (r.htkt?.toLowerCase().includes(search) || '') ||
-            (r.dv?.toLowerCase().includes(search) || '') ||
-            (r.ldkt?.toLowerCase().includes(search) || '') ||
-            (r.qdkt?.toLowerCase().includes(search) || '')
-        );
-    });
+    // List displayed is the raw rewards from server (already filtered)
+    const displayRewards = rewards;
 
     return (
         <div className="space-y-6">
@@ -330,8 +336,8 @@ export const RewardsList = () => {
             <div className="md:hidden space-y-4">
                 {loading ? (
                     <div className="text-center py-8 text-slate-500">Đang tải dữ liệu...</div>
-                ) : filteredRewards.length > 0 ? (
-                    filteredRewards.map((reward) => (
+                ) : displayRewards.length > 0 ? (
+                    displayRewards.map((reward) => (
                         <div key={reward.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-3">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -402,8 +408,8 @@ export const RewardsList = () => {
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400 font-medium">Đang tải dữ liệu...</td>
                                 </tr>
-                            ) : filteredRewards.length > 0 ? (
-                                filteredRewards.map((reward) => (
+                            ) : displayRewards.length > 0 ? (
+                                displayRewards.map((reward) => (
                                     <tr key={reward.id} className="hover:bg-slate-50/80 transition-colors group">
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-1.5">
@@ -460,7 +466,7 @@ export const RewardsList = () => {
                 {/* Pagination */}
                 <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                        Hiển thị <span className="text-slate-700">{filteredRewards.length}</span> / <span className="text-slate-700">{totalCount}</span> bản ghi
+                        Hiển thị <span className="text-slate-700">{displayRewards.length}</span> / <span className="text-slate-700">{totalCount}</span> bản ghi
                     </span>
                     <div className="flex items-center gap-1">
                         <button
