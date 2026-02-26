@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { DutySchedule, getDutySchedules, createDutySchedule, updateDutySchedule, deleteDutySchedule, bulkCreateDutySchedules } from '../services/dutyScheduleService';
 import { getPersonnel, Employee } from '../services/personnelService';
-import { Plus, Search, Calendar as CalendarIcon, Edit, Trash2, FileSpreadsheet, Download, Upload, X, Save, ChevronLeft, ChevronRight, Filter, BarChart3, Clock } from 'lucide-react';
+import { Plus, Search, Calendar as CalendarIcon, Edit, Trash2, FileSpreadsheet, Download, Upload, X, Save, Filter, BarChart3, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { usePermissions } from '../hooks/usePermissions';
 
@@ -24,16 +24,12 @@ export const ScheduleModule = () => {
     // Actually, "Today" might be in a different month than the "View Month" if user navigated.
     // Let's auto-switch the "View Month" when clicking "Today".
 
-    const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-    const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-
-    // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isNurseDropdownOpen, setIsNurseDropdownOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<DutySchedule>>({});
 
     // Filter State
-    const [filterType, setFilterType] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+    const [filterType, setFilterType] = useState<'all' | 'today' | 'week' | 'month' | 'prev_week' | 'next_week' | 'prev_month' | 'custom'>('all');
     const [customDateFrom, setCustomDateFrom] = useState('');
     const [customDateTo, setCustomDateTo] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -41,12 +37,34 @@ export const ScheduleModule = () => {
     // Nurse Multi-select Helper
     const [nurseSearch, setNurseSearch] = useState('');
 
-    // Fetch Data
-    const fetchData = async () => {
+    // Compute which month/year to fetch based on the active filter
+    const getMonthYearForFilter = (type: string) => {
+        const now = new Date();
+        if (type === 'prev_month') {
+            const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            return { month: d.getMonth() + 1, year: d.getFullYear() };
+        }
+        if (type === 'prev_week') {
+            const d = new Date(now);
+            d.setDate(d.getDate() - 7);
+            return { month: d.getMonth() + 1, year: d.getFullYear() };
+        }
+        if (type === 'next_week') {
+            const d = new Date(now);
+            d.setDate(d.getDate() + 7);
+            return { month: d.getMonth() + 1, year: d.getFullYear() };
+        }
+        // all, today, week, month, custom — use current month/year
+        return { month: now.getMonth() + 1, year: now.getFullYear() };
+    };
+
+    const fetchData = async (filter?: string) => {
         setLoading(true);
+        const activeFilter = filter ?? filterType;
+        const { month, year } = getMonthYearForFilter(activeFilter);
         try {
             const [scheduleData, employeeData] = await Promise.all([
-                getDutySchedules(currentMonth, currentYear),
+                getDutySchedules(month, year),
                 getPersonnel()
             ]);
             setSchedules(scheduleData || []);
@@ -60,7 +78,7 @@ export const ScheduleModule = () => {
 
     useEffect(() => {
         fetchData();
-    }, [currentMonth, currentYear]);
+    }, []);
 
     // Helpers
     const getWeekRange = (date: Date) => {
@@ -83,30 +101,48 @@ export const ScheduleModule = () => {
         let filtered = [...schedules];
 
         // 1. Date Filters
-        const today = new Date();
-        const todayStr = today.toISOString().split('T')[0];
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        const getWeekBounds = (offset: number = 0) => {
+            const d = new Date(now);
+            d.setDate(d.getDate() + offset * 7);
+            const day = d.getDay();
+            const diffToMon = day === 0 ? -6 : 1 - day;
+            const start = new Date(d);
+            start.setDate(d.getDate() + diffToMon);
+            const end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            return {
+                start: start.toISOString().split('T')[0],
+                end: end.toISOString().split('T')[0]
+            };
+        };
 
         if (filterType === 'today') {
             filtered = filtered.filter(s => s.ngay_truc === todayStr);
         } else if (filterType === 'week') {
-            const { start, end } = getWeekRange(today);
-            const startStr = start.toISOString().split('T')[0];
-            const endStr = end.toISOString().split('T')[0];
-            // Simple string comparison works for YYYY-MM-DD
-            filtered = filtered.filter(s => s.ngay_truc >= startStr && s.ngay_truc <= endStr);
+            const { start, end } = getWeekBounds(0);
+            filtered = filtered.filter(s => s.ngay_truc >= start && s.ngay_truc <= end);
+        } else if (filterType === 'prev_week') {
+            const { start, end } = getWeekBounds(-1);
+            filtered = filtered.filter(s => s.ngay_truc >= start && s.ngay_truc <= end);
+        } else if (filterType === 'next_week') {
+            const { start, end } = getWeekBounds(1);
+            filtered = filtered.filter(s => s.ngay_truc >= start && s.ngay_truc <= end);
         } else if (filterType === 'month') {
-            // Already fetched by month, but ensures strictness if we change fetching later
-            // For now, basically 'all' in current view, effectively.
+            // current month — already filtered by fetch
+        } else if (filterType === 'prev_month') {
+            // prev month — already filtered by fetch
         } else if (filterType === 'custom' && customDateFrom && customDateTo) {
             filtered = filtered.filter(s => s.ngay_truc >= customDateFrom && s.ngay_truc <= customDateTo);
         }
 
-        // 2. Search Filter (Name, etc.)
+        // 2. Search Filter
         if (searchTerm) {
             const lower = searchTerm.toLowerCase();
             filtered = filtered.filter(s =>
                 (s.bac_sy && s.bac_sy.toLowerCase().includes(lower)) ||
-
                 (s.sau_dai_hoc && s.sau_dai_hoc.toLowerCase().includes(lower)) ||
                 (s.dieu_duong && s.dieu_duong.toLowerCase().includes(lower)) ||
                 (s.phu_dieu_duong && s.phu_dieu_duong.toLowerCase().includes(lower)) ||
@@ -114,8 +150,8 @@ export const ScheduleModule = () => {
             );
         }
 
-        // Sort by date descending
-        return filtered.sort((a, b) => new Date(b.ngay_truc).getTime() - new Date(a.ngay_truc).getTime());
+        // Sort by date ascending
+        return filtered.sort((a, b) => new Date(a.ngay_truc).getTime() - new Date(b.ngay_truc).getTime());
     };
 
     const filteredSchedules = getFilteredSchedules();
@@ -128,22 +164,11 @@ export const ScheduleModule = () => {
     };
 
     // Handlers
-    const handleQuickFilter = (type: 'all' | 'today' | 'week' | 'month') => {
+    const handleQuickFilter = (type: 'all' | 'today' | 'week' | 'month' | 'prev_week' | 'next_week' | 'prev_month') => {
         setFilterType(type);
         setCustomDateFrom('');
         setCustomDateTo('');
-
-        // If "current month" view doesn't match "today", we might need to jump?
-        // Ideally we'd fetch the relevant data. For simplicity, we stay in current view 
-        // but user might not see "today" if they are viewing last month.
-        // Let's auto-jump to current month if Today/Week/Month is clicked.
-        if (type !== 'all') {
-            const now = new Date();
-            if (now.getMonth() + 1 !== currentMonth || now.getFullYear() !== currentYear) {
-                setCurrentMonth(now.getMonth() + 1);
-                setCurrentYear(now.getFullYear());
-            }
-        }
+        fetchData(type);
     };
 
     const handleEdit = (item: DutySchedule) => {
@@ -307,29 +332,17 @@ export const ScheduleModule = () => {
 
                 {/* 2. Filters & Stats Bar */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                    {/* Left: Month Nav & Quick Filters */}
-                    <div className="md:col-span-8 space-y-4">
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                            {/* Month Nav */}
-                            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg w-full sm:w-auto justify-between">
-                                <button onClick={() => {
-                                    if (currentMonth === 1) { setCurrentMonth(12); setCurrentYear(currentYear - 1); }
-                                    else { setCurrentMonth(currentMonth - 1); }
-                                }} className="p-2 hover:bg-white rounded shadow-sm text-slate-600"><ChevronLeft size={18} /></button>
-                                <span className="font-semibold text-slate-700 min-w-[100px] text-center">T{currentMonth}/{currentYear}</span>
-                                <button onClick={() => {
-                                    if (currentMonth === 12) { setCurrentMonth(1); setCurrentYear(currentYear + 1); }
-                                    else { setCurrentMonth(currentMonth + 1); }
-                                }} className="p-2 hover:bg-white rounded shadow-sm text-slate-600"><ChevronRight size={18} /></button>
-                            </div>
-
-                            {/* Quick Filters */}
-                            <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-                                <button onClick={() => handleQuickFilter('today')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'today' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>Hôm nay</button>
-                                <button onClick={() => handleQuickFilter('week')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'week' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>Tuần này</button>
-                                <button onClick={() => handleQuickFilter('month')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'month' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>Tháng này</button>
-                                <button onClick={() => setFilterType('custom')} className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'custom' ? 'bg-blue-100 text-blue-700' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>Tùy chọn</button>
-                            </div>
+                    {/* Left: Quick Filters & Search */}
+                    <div className="md:col-span-8 space-y-3">
+                        <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-2">
+                            <button onClick={() => handleQuickFilter('all')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'all' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tất cả</button>
+                            <button onClick={() => handleQuickFilter('today')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'today' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Hôm nay</button>
+                            <button onClick={() => handleQuickFilter('prev_week')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'prev_week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tuần trước</button>
+                            <button onClick={() => handleQuickFilter('week')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tuần này</button>
+                            <button onClick={() => handleQuickFilter('next_week')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'next_week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tuần sau</button>
+                            <button onClick={() => handleQuickFilter('prev_month')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'prev_month' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tháng trước</button>
+                            <button onClick={() => handleQuickFilter('month')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'month' ? 'bg-green-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tháng này</button>
+                            <button onClick={() => setFilterType('custom')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filterType === 'custom' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tùy chọn</button>
                         </div>
 
                         {/* Custom Range & Search */}
