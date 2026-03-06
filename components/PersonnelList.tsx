@@ -131,12 +131,13 @@ export const PersonnelList = () => {
         setLoading(true);
         try {
             const data = await getPersonnel();
-            // Sort Priority: Đang làm việc > Đang học việc > Tạm nghỉ việc > Đã nghỉ việc
+            // Sort Priority: Đang làm việc > Tăng cường > Đang học việc > Tạm nghỉ việc > Đã nghỉ việc
             const statusPriority: { [key: string]: number } = {
                 'Đang làm việc': 1,
-                'Đang học việc': 2,
-                'Tạm nghỉ việc': 3,
-                'Đã nghỉ việc': 4
+                'Tăng cường': 2,
+                'Đang học việc': 3,
+                'Tạm nghỉ việc': 4,
+                'Đã nghỉ việc': 5
             };
 
             const sortedData = data.sort((a, b) => {
@@ -560,8 +561,9 @@ export const PersonnelList = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{employee.doi_tuong || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-100 text-green-800' :
-                                                        employee.trang_thai === 'Đã nghỉ hưu' ? 'bg-slate-100 text-slate-800' :
-                                                            'bg-red-100 text-red-800'
+                                                        employee.trang_thai === 'Tăng cường' ? 'bg-blue-100 text-blue-800' :
+                                                            employee.trang_thai === 'Đã nghỉ hưu' ? 'bg-slate-100 text-slate-800' :
+                                                                'bg-red-100 text-red-800'
                                                         }`}>
                                                         {employee.trang_thai || 'Chưa cập nhật'}
                                                     </span>
@@ -633,8 +635,9 @@ export const PersonnelList = () => {
                                         <div className="pr-10">
                                             <h3 className="font-bold text-slate-800 text-base">{employee.ho_va_ten}</h3>
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium mt-1 ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-50 text-green-700 border border-green-100' :
-                                                employee.trang_thai === 'Đã nghỉ hưu' ? 'bg-slate-100 text-slate-600 border border-slate-200' :
-                                                    'bg-red-50 text-red-700 border border-red-100'
+                                                employee.trang_thai === 'Tăng cường' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                    employee.trang_thai === 'Đã nghỉ hưu' ? 'bg-slate-100 text-slate-600 border border-slate-200' :
+                                                        'bg-red-50 text-red-700 border border-red-100'
                                                 }`}>
                                                 {employee.trang_thai || 'Chưa cập nhật'}
                                             </span>
@@ -920,6 +923,7 @@ export const PersonnelList = () => {
                                                         <label className="text-sm font-medium text-slate-700">Trạng thái</label>
                                                         <select name="trang_thai" value={formData.trang_thai || 'Đang làm việc'} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500">
                                                             <option value="Đang làm việc">Đang làm việc</option>
+                                                            <option value="Tăng cường">Tăng cường</option>
                                                             <option value="Đang học việc">Đang học việc</option>
                                                             <option value="Nghỉ phép">Nghỉ phép</option>
                                                             <option value="Tạm nghỉ việc">Tạm nghỉ việc</option>
@@ -1278,6 +1282,7 @@ export const PersonnelList = () => {
                                 >
                                     <option value="">-- Không thay đổi --</option>
                                     <option value="Đang làm việc">Đang làm việc</option>
+                                    <option value="Tăng cường">Tăng cường</option>
                                     <option value="Đang học việc">Đang học việc</option>
                                     <option value="Nghỉ phép">Nghỉ phép</option>
                                     <option value="Đi học">Đi học</option>

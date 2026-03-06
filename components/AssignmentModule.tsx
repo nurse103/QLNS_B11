@@ -116,7 +116,7 @@ export const AssignmentModule = () => {
 
             // Fetch personnel
             const personnel = await getPersonnel();
-            setAllPersonnel(personnel.filter(p => p.doi_tuong === 'QNCN' || p.doi_tuong === 'LĐHĐ'));
+            setAllPersonnel(personnel.filter(p => p.doi_tuong === 'QNCN' || p.doi_tuong === 'LĐHĐ' || p.trang_thai === 'Tăng cường'));
         } catch (error) {
             console.error("Failed to fetch assignments", error);
         } finally {

@@ -172,3 +172,17 @@ export interface NCKH {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface Assignment {
+  id: string;
+  ngay_thang: string;
+  buong_1?: string | null;
+  buong_2?: string | null;
+  buong_3?: string | null;
+  buong_4?: string | null;
+  chay_ngoai?: string | null;
+  chup_phim?: string | null;
+  lam_so?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
