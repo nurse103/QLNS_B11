@@ -925,7 +925,7 @@ function App() {
               <Route path="/patient-cards" element={<PatientCardModule />} />
               <Route path="/cong-van" element={<CongVanModule />} />
               <Route path="/research/topics" element={<NCKHModule />} />
-              <Route path="/research" element={<PlaceholderPage title="Nghiên cứu khoa học" />} />
+              <Route path="/research" element={<NCKHModule />} />
               <Route path="/rewards" element={<RewardsModule />} />
               <Route path="/assignments" element={<AssignmentModule />} />
               <Route path="/combat" element={<PlaceholderPage title="Sẵn sàng chiến đấu" />} />
