@@ -84,8 +84,11 @@ export const ScheduleModule = () => {
                 scheduleData = await getDutySchedules(d.getMonth() + 1, d.getFullYear());
             } else if (activeFilter === 'today') {
                 scheduleData = await getDutySchedules(now.getMonth() + 1, now.getFullYear());
+            } else if (activeFilter === 'all' || activeFilter === 'custom') {
+                // Fetch all data for 'all' or 'custom' filters
+                scheduleData = await getDutySchedules();
             } else {
-                // 'all' and 'month' and 'custom' — fetch current month
+                // 'month' — fetch current month
                 scheduleData = await getDutySchedules(now.getMonth() + 1, now.getFullYear());
             }
 
@@ -417,17 +420,16 @@ export const ScheduleModule = () => {
                     <table className="w-full text-sm text-left">
                         <thead className="bg-[#0078D7] text-white font-medium sticky top-0 z-10">
                             <tr>
-                                <th className="px-4 py-3 whitespace-nowrap w-32 border-r border-blue-400">Ngày</th>
-                                <th className="px-4 py-3 border-r border-blue-400">Bác sỹ</th>
+                                <th className="px-4 py-3 whitespace-nowrap w-32 border-r border-blue-600">Ngày</th>
+                                <th className="px-4 py-3 border-r border-blue-600">Bác sỹ</th>
 
-                                <th className="px-4 py-3 border-r border-blue-400">Sau ĐH</th>
-                                <th className="px-4 py-3 border-r border-blue-400">Điều dưỡng</th>
-                                <th className="px-4 py-3 border-r border-blue-400">Phụ ĐD</th>
-                                <th className="px-4 py-3">Ghi chú</th>
+                                <th className="px-4 py-3 border-r border-blue-600">Sau ĐH</th>
+                                <th className="px-4 py-3 border-r border-blue-600">Điều dưỡng</th>
+                                <th className="px-4 py-3 border-r border-blue-600">Phụ ĐD</th>
                                 <th className="px-4 py-3 w-20 text-center">Thao tác</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-300">
                             {filteredSchedules.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="px-6 py-8 text-center text-slate-500 italic">
@@ -437,7 +439,7 @@ export const ScheduleModule = () => {
                             ) : (
                                 filteredSchedules.map((schedule) => (
                                     <tr key={schedule.id} className={`hover:bg-slate-50 transition-colors ${isWeekend(schedule.ngay_truc) ? 'bg-red-50/30' : ''}`}>
-                                        <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-100">
+                                        <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-300">
                                             {schedule.ngay_truc ? (() => {
                                                 const d = new Date(schedule.ngay_truc);
                                                 return (
@@ -450,12 +452,11 @@ export const ScheduleModule = () => {
                                                 )
                                             })() : '-'}
                                         </td>
-                                        <td className={`px-4 py-3 border-r border-slate-100 font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.bac_sy}</td>
+                                        <td className={`px-4 py-3 border-r border-slate-300 font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.bac_sy}</td>
 
-                                        <td className="px-4 py-3 border-r border-slate-100 text-slate-600">{schedule.sau_dai_hoc}</td>
-                                        <td className={`px-4 py-3 border-r border-slate-100 max-w-xs truncate font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-blue-700'}`} title={schedule.dieu_duong || ''}>{schedule.dieu_duong}</td>
-                                        <td className="px-4 py-3 border-r border-slate-100 text-slate-600">{schedule.phu_dieu_duong}</td>
-                                        <td className={`px-4 py-3 font-bold italic text-xs ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.ghi_chu}</td>
+                                        <td className={`px-4 py-3 border-r border-slate-300 text-slate-600`}>{schedule.sau_dai_hoc}</td>
+                                        <td className={`px-4 py-3 border-r border-slate-300 whitespace-normal break-words font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-blue-700'}`} title={schedule.dieu_duong || ''}>{schedule.dieu_duong}</td>
+                                        <td className="px-4 py-3 border-r border-slate-300 text-slate-600">{schedule.phu_dieu_duong}</td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 {can_edit && (
