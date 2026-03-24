@@ -9,8 +9,8 @@ BEGIN
       SET trang_thai = 'Đang mượn thẻ chăm'
       WHERE so_the = NEW.so_the;
   
-  -- If a record is updated to a returned state ('Đã trả thẻ' or 'Đã trả thẻ chưa trả tiền')
-  ELSIF (TG_OP = 'UPDATE' AND NEW.trang_thai IN ('Đã trả thẻ', 'Đã trả thẻ chưa trả tiền') AND OLD.trang_thai NOT IN ('Đã trả thẻ', 'Đã trả thẻ chưa trả tiền')) THEN
+  -- If a record is updated to a returned state ('Đã trả thẻ' or 'Trả thẻ chưa trả tiền')
+  ELSIF (TG_OP = 'UPDATE' AND NEW.trang_thai IN ('Đã trả thẻ', 'Trả thẻ chưa trả tiền') AND OLD.trang_thai NOT IN ('Đã trả thẻ', 'Trả thẻ chưa trả tiền')) THEN
       -- Check if there are OTHER active borrows for this card
       IF NOT EXISTS (
           SELECT 1 FROM quan_ly_the_cham 

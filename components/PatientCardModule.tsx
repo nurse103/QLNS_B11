@@ -159,7 +159,7 @@ export const PatientCardModule = () => {
     // 3. Calculate Counts based on base filters
     const borrowingCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đang mượn thẻ').length;
     const returnedCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đã trả thẻ').length;
-    const returnedUnpaidCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đã trả thẻ chưa trả tiền').length;
+    const returnedUnpaidCount = baseFilteredRecords.filter(r => r.trang_thai === 'Trả thẻ chưa trả tiền').length;
     const dischargedNoCardCount = baseFilteredRecords.filter(r => r.trang_thai === 'Ra chưa trả thẻ').length;
 
     // 4. Final Pass: Filter by Status
@@ -167,7 +167,7 @@ export const PatientCardModule = () => {
         if (statusFilter === 'all') return true;
         if (statusFilter === 'borrowing') return r.trang_thai === 'Đang mượn thẻ';
         if (statusFilter === 'returned') return r.trang_thai === 'Đã trả thẻ';
-        if (statusFilter === 'returned_unpaid') return r.trang_thai === 'Đã trả thẻ chưa trả tiền';
+        if (statusFilter === 'returned_unpaid') return r.trang_thai === 'Trả thẻ chưa trả tiền';
         if (statusFilter === 'discharged_no_card') return r.trang_thai === 'Ra chưa trả thẻ';
         return true;
     });
@@ -709,12 +709,12 @@ export const PatientCardModule = () => {
                                             <td className="px-4 py-3">
                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                                                     record.trang_thai === 'Đã trả thẻ' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                        record.trang_thai === 'Đã trả thẻ chưa trả tiền' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                                        record.trang_thai === 'Trả thẻ chưa trả tiền' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
                                                             'bg-red-50 text-red-700 border-red-100'
                                                     }`}>
                                                     {record.trang_thai}
                                                 </span>
-                                                {(record.trang_thai === 'Đã trả thẻ' || record.trang_thai === 'Đã trả thẻ chưa trả tiền' || record.trang_thai === 'Ra chưa trả thẻ') && record.ngay_tra && (
+                                                {(record.trang_thai === 'Đã trả thẻ' || record.trang_thai === 'Trả thẻ chưa trả tiền' || record.trang_thai === 'Ra chưa trả thẻ') && record.ngay_tra && (
                                                     <div className="text-[10px] text-slate-500 mt-1">
                                                         {record.trang_thai === 'Ra chưa trả thẻ' ? 'Ngày ra: ' : 'Trả: '} {formatDate(record.ngay_tra)}
                                                     </div>
@@ -805,7 +805,7 @@ export const PatientCardModule = () => {
                                         </h3>
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
                                             record.trang_thai === 'Đã trả thẻ' ? 'bg-green-50 text-green-700 border-green-100' :
-                                                record.trang_thai === 'Đã trả thẻ chưa trả tiền' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                                record.trang_thai === 'Trả thẻ chưa trả tiền' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
                                                     'bg-red-50 text-red-700 border-red-100'
                                             }`}>
                                             {record.trang_thai}
@@ -963,7 +963,7 @@ export const PatientCardModule = () => {
                                                 </div>
 
                                                 {/* Return Info - Only if returned or discharged */}
-                                                {(formData.trang_thai === 'Đã trả thẻ' || formData.trang_thai === 'Đã trả thẻ chưa trả tiền' || formData.trang_thai === 'Ra chưa trả thẻ') && (
+                                                {(formData.trang_thai === 'Đã trả thẻ' || formData.trang_thai === 'Trả thẻ chưa trả tiền' || formData.trang_thai === 'Ra chưa trả thẻ') && (
                                                     <>
                                                         <div className="col-span-1 md:col-span-2 border-t border-blue-200 mt-2 mb-2"></div>
                                                         <div>
@@ -1155,7 +1155,7 @@ export const PatientCardModule = () => {
                                                     >
                                                         <option value="Đang mượn thẻ">Đang mượn thẻ</option>
                                                         <option value="Đã trả thẻ">Đã trả thẻ</option>
-                                                        <option value="Đã trả thẻ chưa trả tiền">Đã trả thẻ chưa trả tiền</option>
+                                                        <option value="Trả thẻ chưa trả tiền">Trả thẻ chưa trả tiền</option>
                                                         <option value="Ra chưa trả thẻ">Ra chưa trả thẻ</option>
                                                     </select>
                                                 </div>
@@ -1260,7 +1260,7 @@ export const PatientCardModule = () => {
                                         onChange={e => setReturnData({ ...returnData, trang_thai: e.target.value })}
                                     >
                                         <option value="Đã trả thẻ">Đã trả thẻ (Đầy đủ)</option>
-                                        <option value="Đã trả thẻ chưa trả tiền">Đã trả thẻ (Chưa trả tiền cọc)</option>
+                                        <option value="Trả thẻ chưa trả tiền">Trả thẻ chưa trả tiền</option>
                                         <option value="Ra chưa trả thẻ">Bệnh nhân ra viện chưa trả thẻ</option>
                                     </select>
                                 </div>
@@ -1396,7 +1396,7 @@ export const PatientCardModule = () => {
                                         >
                                             <option value="Đang mượn thẻ">Đang mượn thẻ</option>
                                             <option value="Đã trả thẻ">Đã trả thẻ</option>
-                                            <option value="Đã trả thẻ chưa trả tiền">Đã trả thẻ chưa trả tiền</option>
+                                            <option value="Trả thẻ chưa trả tiền">Trả thẻ chưa trả tiền</option>
                                             <option value="Ra chưa trả thẻ">Ra chưa trả thẻ</option>
                                         </select>
                                     </div>
