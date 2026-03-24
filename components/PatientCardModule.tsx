@@ -995,7 +995,7 @@ export const PatientCardModule = () => {
 
                                         {/* Action Footer for View Mode */}
                                         <div className="flex flex-wrap gap-2 justify-end pt-4 border-t border-slate-100">
-                                            {formData.trang_thai === 'Đang mượn thẻ' && (
+                                            {(formData.trang_thai === 'Đang mượn thẻ' || formData.trang_thai === 'Ra chưa trả thẻ') && (
                                                 <button
                                                     onClick={() => {
                                                         setIsModalOpen(false);
