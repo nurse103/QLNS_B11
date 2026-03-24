@@ -15,7 +15,7 @@ export const PatientCardModule = () => {
 
     // Filter State
     type FilterType = 'all' | 'today' | 'yesterday' | '2_days_ago' | '3_days_ago' | 'custom';
-    type StatusFilterType = 'all' | 'borrowing' | 'returned';
+    type StatusFilterType = 'all' | 'borrowing' | 'returned' | 'returned_unpaid' | 'discharged_no_card';
 
     const [filterType, setFilterType] = useState<FilterType>('all');
     const [statusFilter, setStatusFilter] = useState<StatusFilterType>('borrowing');
@@ -26,7 +26,7 @@ export const PatientCardModule = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<CardRecord>>({});
-    const [returnData, setReturnData] = useState<{ id: number, nguoi_nhan_lai_the: string, ngay_tra: string, nguoi_ban_giao_tien_tra?: string, ngay_ban_giao_tien_tra?: string, trang_thai_tien_tra?: string }>({ id: 0, nguoi_nhan_lai_the: '', ngay_tra: '' });
+    const [returnData, setReturnData] = useState<{ id: number, nguoi_nhan_lai_the: string, ngay_tra: string, trang_thai?: string, nguoi_ban_giao_tien_tra?: string, ngay_ban_giao_tien_tra?: string, trang_thai_tien_tra?: string }>({ id: 0, nguoi_nhan_lai_the: '', ngay_tra: '' });
     const [isViewMode, setIsViewMode] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
 
@@ -34,13 +34,13 @@ export const PatientCardModule = () => {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
     const [batchData, setBatchData] = useState<{
-        type: 'borrow' | 'return',
+        type: 'borrow' | 'return' | 'status',
         trang_thai: string,
         nguoi_ban_giao: string,
         ngay_ban_giao: string
     }>({
         type: 'borrow',
-        trang_thai: 'Đã bàn giao', // Default to 'Đã bàn giao' as this is the likely action
+        trang_thai: 'Đã bàn giao', // Default for handover
         nguoi_ban_giao: '',
         ngay_ban_giao: ''
     });
@@ -159,12 +159,16 @@ export const PatientCardModule = () => {
     // 3. Calculate Counts based on base filters
     const borrowingCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đang mượn thẻ').length;
     const returnedCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đã trả thẻ').length;
+    const returnedUnpaidCount = baseFilteredRecords.filter(r => r.trang_thai === 'Đã trả thẻ chưa trả tiền').length;
+    const dischargedNoCardCount = baseFilteredRecords.filter(r => r.trang_thai === 'Ra chưa trả thẻ').length;
 
     // 4. Final Pass: Filter by Status
     const filteredRecords = baseFilteredRecords.filter(r => {
         if (statusFilter === 'all') return true;
         if (statusFilter === 'borrowing') return r.trang_thai === 'Đang mượn thẻ';
         if (statusFilter === 'returned') return r.trang_thai === 'Đã trả thẻ';
+        if (statusFilter === 'returned_unpaid') return r.trang_thai === 'Đã trả thẻ chưa trả tiền';
+        if (statusFilter === 'discharged_no_card') return r.trang_thai === 'Ra chưa trả thẻ';
         return true;
     });
 
@@ -261,7 +265,7 @@ export const PatientCardModule = () => {
         e.preventDefault();
         try {
             await updateCardRecord(returnData.id, {
-                trang_thai: 'Đã trả thẻ',
+                trang_thai: returnData.trang_thai || 'Đã trả thẻ',
                 nguoi_nhan_lai_the: returnData.nguoi_nhan_lai_the,
                 ngay_tra: new Date(returnData.ngay_tra).toISOString(),
                 nguoi_ban_giao_tien_tra: returnData.nguoi_ban_giao_tien_tra,
@@ -314,12 +318,12 @@ export const PatientCardModule = () => {
         }
     };
 
-    const handleOpenBatchModal = () => {
+    const handleOpenBatchModal = (mode: 'borrow' | 'return' | 'status') => {
         const now = new Date();
         const localIso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
         setBatchData({
-            type: 'borrow',
-            trang_thai: 'Đã bàn giao',
+            type: mode,
+            trang_thai: mode === 'status' ? 'Đã trả thẻ' : 'Đã bàn giao',
             nguoi_ban_giao: currentUser?.full_name || currentUser?.username || 'Admin',
             ngay_ban_giao: localIso
         });
@@ -339,10 +343,17 @@ export const PatientCardModule = () => {
                     updatePayload.trang_thai_tien_muon = batchData.trang_thai;
                     updatePayload.nguoi_ban_giao_tien_muon = batchData.nguoi_ban_giao;
                     updatePayload.ngay_ban_giao_tien_muon = timestamp;
-                } else {
+                } else if (batchData.type === 'return') {
                     updatePayload.trang_thai_tien_tra = batchData.trang_thai;
                     updatePayload.nguoi_ban_giao_tien_tra = batchData.nguoi_ban_giao;
                     updatePayload.ngay_ban_giao_tien_tra = timestamp;
+                } else if (batchData.type === 'status') {
+                    updatePayload.trang_thai = batchData.trang_thai;
+                    // For status update, we might also want to set return date if it's a "returned" status
+                    if (batchData.trang_thai !== 'Đang mượn thẻ') {
+                        updatePayload.ngay_tra = timestamp;
+                        updatePayload.nguoi_nhan_lai_the = batchData.nguoi_ban_giao;
+                    }
                 }
                 return updateCardRecord(id, updatePayload);
             });
@@ -473,8 +484,9 @@ export const PatientCardModule = () => {
                 <div className="flex gap-2">
                     {isAdmin && selectedIds.length > 0 && (
                         <button
-                            onClick={handleOpenBatchModal}
+                            onClick={() => handleOpenBatchModal('borrow')}
                             className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+                            title="Cập nhật Bàn giao tiền hoặc Trạng thái thẻ"
                         >
                             <CreditCard size={18} /> Cập nhật BG ({selectedIds.length})
                         </button>
@@ -591,6 +603,26 @@ export const PatientCardModule = () => {
                             <span className={`w-2 h-2 rounded-full ${statusFilter === 'returned' ? 'bg-white' : 'bg-green-500'}`}></span>
                             Đã trả ({returnedCount})
                         </button>
+                        <button
+                            onClick={() => setStatusFilter('returned_unpaid')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border flex items-center gap-2 ${statusFilter === 'returned_unpaid'
+                                ? 'bg-yellow-600 text-white border-yellow-600'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-yellow-50'
+                                }`}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${statusFilter === 'returned_unpaid' ? 'bg-white' : 'bg-yellow-500'}`}></span>
+                            Đã trả chưa tiền ({returnedUnpaidCount})
+                        </button>
+                        <button
+                            onClick={() => setStatusFilter('discharged_no_card')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border flex items-center gap-2 ${statusFilter === 'discharged_no_card'
+                                ? 'bg-red-600 text-white border-red-600'
+                                : 'bg-white text-slate-600 border-slate-200 hover:bg-red-50'
+                                }`}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${statusFilter === 'discharged_no_card' ? 'bg-white' : 'bg-red-500'}`}></span>
+                            Ra chưa trả thẻ ({dischargedNoCardCount})
+                        </button>
                     </div>
                 </div>
 
@@ -676,13 +708,15 @@ export const PatientCardModule = () => {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                                    'bg-green-50 text-green-700 border-green-100'
+                                                    record.trang_thai === 'Đã trả thẻ' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                        record.trang_thai === 'Đã trả thẻ chưa trả tiền' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                                            'bg-red-50 text-red-700 border-red-100'
                                                     }`}>
                                                     {record.trang_thai}
                                                 </span>
-                                                {record.trang_thai === 'Đã trả thẻ' && (
+                                                {(record.trang_thai === 'Đã trả thẻ' || record.trang_thai === 'Đã trả thẻ chưa trả tiền' || record.trang_thai === 'Ra chưa trả thẻ') && record.ngay_tra && (
                                                     <div className="text-[10px] text-slate-500 mt-1">
-                                                        Trả: {formatDate(record.ngay_tra)}
+                                                        {record.trang_thai === 'Ra chưa trả thẻ' ? 'Ngày ra: ' : 'Trả: '} {formatDate(record.ngay_tra)}
                                                     </div>
                                                 )}
                                             </td>
@@ -712,16 +746,16 @@ export const PatientCardModule = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(record)}
-                                                        disabled={record.nguoi_cho_muon !== currentUser?.full_name}
-                                                        className={`p-1.5 rounded transition-colors ${record.nguoi_cho_muon === currentUser?.full_name
+                                                        disabled={!isAdmin && record.created_by !== currentUser?.id}
+                                                        className={`p-1.5 rounded transition-colors ${isAdmin || record.created_by === currentUser?.id
                                                             ? 'text-slate-500 hover:text-orange-600 hover:bg-orange-50'
                                                             : 'text-slate-300 cursor-not-allowed'
                                                             }`}
-                                                        title={record.nguoi_cho_muon === currentUser?.full_name ? "Sửa thông tin" : "Bạn chỉ được sửa bản ghi do mình tạo"}
+                                                        title={isAdmin || record.created_by === currentUser?.id ? "Sửa thông tin" : "Bạn chỉ được sửa bản ghi do mình tạo"}
                                                     >
                                                         <Edit size={16} />
                                                     </button>
-                                                    {record.trang_thai === 'Đang mượn thẻ' && (
+                                                    {(record.trang_thai === 'Đang mượn thẻ' || record.trang_thai === 'Ra chưa trả thẻ') && (
                                                         <button
                                                             onClick={() => handleOpenReturnModal(record)}
                                                             className="px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap bg-green-50 text-green-700 hover:bg-green-100 flex items-center gap-1"
@@ -770,7 +804,9 @@ export const PatientCardModule = () => {
                                             {record.ho_ten_benh_nhan?.toUpperCase()}
                                         </h3>
                                         <span className={`px-2 py-0.5 rounded text-[10px] font-medium border whitespace-nowrap ${record.trang_thai === 'Đang mượn thẻ' ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                            'bg-green-50 text-green-700 border-green-100'
+                                            record.trang_thai === 'Đã trả thẻ' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                record.trang_thai === 'Đã trả thẻ chưa trả tiền' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                                    'bg-red-50 text-red-700 border-red-100'
                                             }`}>
                                             {record.trang_thai}
                                         </span>
@@ -926,8 +962,8 @@ export const PatientCardModule = () => {
                                                     )}
                                                 </div>
 
-                                                {/* Return Info - Only if returned */}
-                                                {(formData.trang_thai === 'Đã trả thẻ') && (
+                                                {/* Return Info - Only if returned or discharged */}
+                                                {(formData.trang_thai === 'Đã trả thẻ' || formData.trang_thai === 'Đã trả thẻ chưa trả tiền' || formData.trang_thai === 'Ra chưa trả thẻ') && (
                                                     <>
                                                         <div className="col-span-1 md:col-span-2 border-t border-blue-200 mt-2 mb-2"></div>
                                                         <div>
@@ -972,8 +1008,8 @@ export const PatientCardModule = () => {
                                             )}
                                             <button
                                                 onClick={() => handleEdit(formData as CardRecord)}
-                                                disabled={formData.nguoi_cho_muon !== currentUser?.full_name}
-                                                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border ${formData.nguoi_cho_muon === currentUser?.full_name
+                                                disabled={!isAdmin && formData.created_by !== currentUser?.id}
+                                                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 border ${isAdmin || formData.created_by === currentUser?.id
                                                     ? 'text-orange-600 bg-white border-orange-200 hover:bg-orange-50'
                                                     : 'text-slate-300 bg-slate-50 border-slate-200 cursor-not-allowed'
                                                     }`}
@@ -983,10 +1019,17 @@ export const PatientCardModule = () => {
                                             {can_delete && (
                                                 <button
                                                     onClick={() => {
+                                                        if (!isAdmin && formData.created_by !== currentUser?.id) {
+                                                            alert("Bạn chỉ được xóa bản ghi do mình tạo");
+                                                            return;
+                                                        }
                                                         handleDeleteRecord(formData.id!);
                                                         setIsModalOpen(false);
                                                     }}
-                                                    className="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 font-medium rounded-lg transition-colors flex items-center gap-2"
+                                                    className={`px-4 py-2 bg-white border font-medium rounded-lg transition-colors flex items-center gap-2 ${isAdmin || formData.created_by === currentUser?.id
+                                                        ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                                        : 'border-slate-200 text-slate-300 cursor-not-allowed'
+                                                        }`}
                                                 >
                                                     <Trash2 size={18} /> Xóa
                                                 </button>
@@ -1101,6 +1144,23 @@ export const PatientCardModule = () => {
                                                 />
                                             </div>
 
+                                            {isEditMode && (
+                                                <div className="space-y-2">
+                                                    <label className="block text-sm font-medium text-slate-700">Trạng thái thẻ <span className="text-red-500">*</span></label>
+                                                    <select
+                                                        required
+                                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        value={formData.trang_thai || 'Đang mượn thẻ'}
+                                                        onChange={e => setFormData({ ...formData, trang_thai: e.target.value })}
+                                                    >
+                                                        <option value="Đang mượn thẻ">Đang mượn thẻ</option>
+                                                        <option value="Đã trả thẻ">Đã trả thẻ</option>
+                                                        <option value="Đã trả thẻ chưa trả tiền">Đã trả thẻ chưa trả tiền</option>
+                                                        <option value="Ra chưa trả thẻ">Ra chưa trả thẻ</option>
+                                                    </select>
+                                                </div>
+                                            )}
+
                                             {/* Money Handover Fields */}
                                             {(isAdmin || (formData.trang_thai_tien_muon === 'Đã bàn giao')) && (
                                                 <div className="border-t border-slate-100 pt-4 mt-2">
@@ -1193,7 +1253,20 @@ export const PatientCardModule = () => {
 
                             <form onSubmit={handleReturnSubmit} className="p-6 space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Ngày trả <span className="text-red-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">Hình thức trả <span className="text-red-500">*</span></label>
+                                    <select
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={returnData.trang_thai || 'Đã trả thẻ'}
+                                        onChange={e => setReturnData({ ...returnData, trang_thai: e.target.value })}
+                                    >
+                                        <option value="Đã trả thẻ">Đã trả thẻ (Đầy đủ)</option>
+                                        <option value="Đã trả thẻ chưa trả tiền">Đã trả thẻ (Chưa trả tiền cọc)</option>
+                                        <option value="Ra chưa trả thẻ">Bệnh nhân ra viện chưa trả thẻ</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Ngày thực hiện <span className="text-red-500">*</span></label>
                                     <input
                                         type="datetime-local"
                                         required
@@ -1273,13 +1346,16 @@ export const PatientCardModule = () => {
                     </div>
                 )
             }
+
             {/* Batch Update Modal */}
             {
                 isBatchModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                         <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-                                <h2 className="text-xl font-bold text-slate-800">Cập nhật bàn giao tiền hàng loạt</h2>
+                                <h2 className="text-xl font-bold text-slate-800">
+                                    {batchData.type === 'status' ? 'Cập nhật trạng thái hàng loạt' : 'Cập nhật bàn giao tiền hàng loạt'}
+                                </h2>
                                 <button onClick={() => setIsBatchModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-200 transition-colors">
                                     <X size={24} />
                                 </button>
@@ -1291,31 +1367,57 @@ export const PatientCardModule = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Loại bàn giao <span className="text-red-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">Loại cập nhật <span className="text-red-500">*</span></label>
                                     <select
                                         className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         value={batchData.type}
-                                        onChange={e => setBatchData({ ...batchData, type: e.target.value as 'borrow' | 'return' })}
+                                        onChange={e => {
+                                            const type = e.target.value as 'borrow' | 'return' | 'status';
+                                            setBatchData({
+                                                ...batchData,
+                                                type,
+                                                trang_thai: type === 'status' ? 'Đã trả thẻ' : 'Đã bàn giao'
+                                            });
+                                        }}
                                     >
-                                        <option value="borrow">Tiền MƯỢN thẻ (Đặt cọc)</option>
-                                        <option value="return">Tiền TRẢ thẻ (Hoàn tiền)</option>
+                                        <option value="borrow">Tiền MƯỢN thẻ (Đã bàn giao cọc)</option>
+                                        <option value="return">Tiền TRẢ thẻ (Đã bàn giao hoàn cọc)</option>
+                                        <option value="status">Trạng thái thẻ (Xác nhận trả/mượn)</option>
                                     </select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Trạng thái mới <span className="text-red-500">*</span></label>
-                                    <select
-                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        value={batchData.trang_thai}
-                                        onChange={e => setBatchData({ ...batchData, trang_thai: e.target.value })}
-                                    >
-                                        <option value="Đã bàn giao">Đã bàn giao</option>
-                                        <option value="Chưa bàn giao">Chưa bàn giao</option>
-                                    </select>
-                                </div>
+                                {batchData.type === 'status' ? (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Trạng thái thẻ mới <span className="text-red-500">*</span></label>
+                                        <select
+                                            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            value={batchData.trang_thai}
+                                            onChange={e => setBatchData({ ...batchData, trang_thai: e.target.value })}
+                                        >
+                                            <option value="Đang mượn thẻ">Đang mượn thẻ</option>
+                                            <option value="Đã trả thẻ">Đã trả thẻ</option>
+                                            <option value="Đã trả thẻ chưa trả tiền">Đã trả thẻ chưa trả tiền</option>
+                                            <option value="Ra chưa trả thẻ">Ra chưa trả thẻ</option>
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium text-slate-700">Trạng thái bàn giao mới <span className="text-red-500">*</span></label>
+                                        <select
+                                            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            value={batchData.trang_thai}
+                                            onChange={e => setBatchData({ ...batchData, trang_thai: e.target.value })}
+                                        >
+                                            <option value="Đã bàn giao">Đã bàn giao</option>
+                                            <option value="Chưa bàn giao">Chưa bàn giao</option>
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Người thực hiện bàn giao <span className="text-red-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">
+                                        {batchData.type === 'status' ? 'Người thực hiện/Nhận thẻ' : 'Người thực hiện bàn giao'} <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="text"
                                         required
@@ -1326,7 +1428,9 @@ export const PatientCardModule = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-700">Thời gian bàn giao <span className="text-red-500">*</span></label>
+                                    <label className="text-sm font-medium text-slate-700">
+                                        {batchData.type === 'status' ? 'Thời gian cập nhật' : 'Thời gian thực hiện'} <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="datetime-local"
                                         required
