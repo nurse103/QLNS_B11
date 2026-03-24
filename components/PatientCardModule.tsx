@@ -611,7 +611,7 @@ export const PatientCardModule = () => {
                                 }`}
                         >
                             <span className={`w-2 h-2 rounded-full ${statusFilter === 'returned_unpaid' ? 'bg-white' : 'bg-yellow-500'}`}></span>
-                            Đã trả chưa tiền ({returnedUnpaidCount})
+                            Trả thẻ chưa trả tiền ({returnedUnpaidCount})
                         </button>
                         <button
                             onClick={() => setStatusFilter('discharged_no_card')}
