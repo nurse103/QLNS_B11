@@ -18,8 +18,8 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, o
     const getFirstDayOfMonth = (year: number, month: number) => {
         // 0 = Sunday, 1 = Monday, ...
         const day = new Date(year, month, 1).getDay();
-        // Adjust so Valid Monday=0... Sunday=6 if we want Monday start, but standard JS is Sun=0
-        return day;
+        // Adjust so Monday=0, Sunday=6
+        return (day + 6) % 7;
     };
 
     const daysInMonth = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
@@ -35,7 +35,7 @@ export const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ schedules, o
 
     const renderCells = () => {
         const cells = [];
-        const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+        const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
         // Header
         const header = days.map(day => (

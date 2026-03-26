@@ -246,7 +246,12 @@ export const ScheduleModule = () => {
 
     const handleDownloadTemplate = () => {
         const headers = ["Ngày trực (YYYY-MM-DD)", "Bác sỹ", "Sau đại học", "Điều dưỡng", "Phụ điều dưỡng", "Ghi chú"];
-        const ws = XLSX.utils.aoa_to_sheet([headers]);
+        const sampleData = [
+            ["30/03/2026", "Phạm Văn Công", "Sơn, Đức, Việt, Thông", "Lâm Quang Thực, Nguyễn Bá Bằng", "Vũ Thị Thanh Vân, Nguyễn Thị Thảo", ""],
+            ["31/03/2026", "Trần Văn Tùng", "Nghĩa, Lợi, Tân, Thìn", "Định Quốc Thịnh, Nguyễn Minh Ngọc", "", "Hiệu"]
+        ];
+        const wsData = [headers, ...sampleData];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Mau_Lich_Truc");
         XLSX.writeFile(wb, "Mau_Nhap_Lieu_Lich_Truc.xlsx");
@@ -258,47 +263,136 @@ export const ScheduleModule = () => {
         const reader = new FileReader();
         reader.onload = async (evt) => {
             const bstr = evt.target?.result;
-            const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-            const rows = data.slice(1) as any[];
+            
+            // Try different Excel reading configurations
+            let wb, ws, data, rows;
+            
+            try {
+                // Method 1: Read with cellDates = true first
+                wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
+                ws = wb.Sheets[wb.SheetNames[0]];
+                data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+                rows = data.slice(1) as any[];
+                console.log('Method 1 (cellDates: true) - First row:', rows[0]);
+            } catch (error) {
+                console.error('Method 1 failed:', error);
+                
+                // Method 2: Fallback to cellDates = false
+                wb = XLSX.read(bstr, { type: 'binary', cellDates: false, raw: false });
+                ws = wb.Sheets[wb.SheetNames[0]];
+                data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+                rows = data.slice(1) as any[];
+                console.log('Method 2 (cellDates: false) - First row:', rows[0]);
+            }
 
             const parseDate = (val: any): string | null => {
-                if (!val) return null;
-                // If it's already a Date object (from cellDates: true)
+                if (!val || val === "" || val === null || val === undefined) return null;
+                
+                console.log('Processing value:', val, 'Type:', typeof val, 'Constructor:', val.constructor?.name);
+                
+                // Case 1: JavaScript Date object (from Excel cellDates: true)
                 if (val instanceof Date) {
                     const y = val.getFullYear();
                     const m = String(val.getMonth() + 1).padStart(2, '0');
                     const d = String(val.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${d}`;
+                    const result = `${y}-${m}-${d}`;
+                    console.log('✅ Date object converted to:', result);
+                    return result;
                 }
-                // If it's a string already in YYYY-MM-DD or DD/MM/YYYY
-                if (typeof val === 'string') {
-                    // Try to detect dd/mm/yyyy
-                    const parts = val.split('/');
-                    if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                    return val; // Assume already YYYY-MM-DD
+                
+                // Convert to string and clean up
+                let dateStr = String(val).trim();
+                console.log('Cleaned string:', dateStr);
+                
+                // Case 2: Already in YYYY-MM-DD format
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    console.log('✅ Already YYYY-MM-DD format');
+                    return dateStr;
                 }
-                // If it's an Excel serial number (number)
-                if (typeof val === 'number') {
-                    const parsed = XLSX.SSF.parse_date_code(val);
-                    if (parsed) {
-                        const m = String(parsed.m).padStart(2, '0');
-                        const d = String(parsed.d).padStart(2, '0');
-                        return `${parsed.y}-${m}-${d}`;
+                
+                // Case 3: DD/MM/YYYY or D/M/YYYY format
+                const dmyMatch = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                if (dmyMatch) {
+                    const day = dmyMatch[1].padStart(2, '0');
+                    const month = dmyMatch[2].padStart(2, '0');
+                    const year = dmyMatch[3];
+                    const result = `${year}-${month}-${day}`;
+                    console.log('✅ DD/MM/YYYY converted to:', result);
+                    return result;
+                }
+                
+                // Case 4: YYYY/MM/DD format
+                const ymdMatch = dateStr.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+                if (ymdMatch) {
+                    const year = ymdMatch[1];
+                    const month = ymdMatch[2].padStart(2, '0');
+                    const day = ymdMatch[3].padStart(2, '0');
+                    const result = `${year}-${month}-${day}`;
+                    console.log('✅ YYYY/MM/DD converted to:', result);
+                    return result;
+                }
+                
+                // Case 5: Excel serial number  
+                const numVal = parseFloat(dateStr);
+                if (!isNaN(numVal) && numVal > 1 && numVal < 100000) { // Reasonable Excel serial range
+                    try {
+                        // Standard Excel serial to date conversion
+                        const date = new Date((numVal - 25569) * 86400 * 1000);
+                        
+                        if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+                            const y = date.getUTCFullYear();
+                            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+                            const d = String(date.getUTCDate()).padStart(2, '0');
+                            const result = `${y}-${m}-${d}`;
+                            console.log('✅ Excel serial converted to:', result);
+                            return result;
+                        }
+                    } catch (error) {
+                        console.error('Excel serial conversion error:', error);
                     }
                 }
+                
+                // Case 6: Try JavaScript Date parsing as last resort
+                try {
+                    const date = new Date(dateStr);
+                    if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        const result = `${y}-${m}-${d}`;
+                        console.log('✅ JS Date parsed to:', result);
+                        return result;
+                    }
+                } catch (error) {
+                    console.error('JS Date parsing error:', error);
+                }
+                
+                console.log('❌ Failed to parse date:', dateStr);
                 return null;
             };
 
-            const newSchedules = rows.map(row => ({
-                ngay_truc: parseDate(row[0]),
-                bac_sy: row[1] || null,
-                sau_dai_hoc: row[2] || null,
-                dieu_duong: row[3] || null,
-                phu_dieu_duong: row[4] || null,
-                ghi_chu: row[5] || null
-            })).filter(s => s.ngay_truc);
+            const newSchedules = rows
+                .map((row, index) => {
+                    console.log(`Row ${index + 2}:`, row);
+                    const parsedDate = parseDate(row[0]);
+                    if (!parsedDate) {
+                        console.log(`Skipped row ${index + 2}: Invalid date`);
+                        return null;
+                    }
+                    
+                    return {
+                        ngay_truc: parsedDate,
+                        bac_sy: row[1] || null,
+                        sau_dai_hoc: row[2] || null,  
+                        dieu_duong: row[3] || null,
+                        phu_dieu_duong: row[4] || null,
+                        ghi_chu: row[5] || null
+                    };
+                })
+                .filter(s => s !== null);
+
+            console.log('Valid schedules found:', newSchedules.length);
+            console.log('Sample schedule:', newSchedules[0]);
 
             if (newSchedules.length > 0) {
                 try {
@@ -306,10 +400,11 @@ export const ScheduleModule = () => {
                     alert(`Đã import ${newSchedules.length} dòng thành công!`);
                     fetchData();
                 } catch (err: any) {
+                    console.error('Import error:', err);
                     alert("Lỗi import: " + (err.message || JSON.stringify(err)));
                 }
             } else {
-                alert("Không có dòng dữ liệu hợp lệ nào trong file. Hãy kiểm tra lại định dạng ngày (YYYY-MM-DD).");
+                alert("Không có dòng dữ liệu hợp lệ nào trong file. Hãy kiểm tra lại định dạng ngày (DD/MM/YYYY hoặc YYYY-MM-DD).");
             }
         };
         reader.readAsBinaryString(file);

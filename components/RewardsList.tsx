@@ -226,7 +226,7 @@ export const RewardsList = () => {
         reader.onload = async (event) => {
             try {
                 const bstr = event.target?.result;
-                const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
+                const wb = XLSX.read(bstr, { type: 'binary', cellDates: false });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws) as any[];
@@ -235,13 +235,21 @@ export const RewardsList = () => {
                     if (!dateVal) return new Date().toISOString().split('T')[0];
 
                     if (dateVal instanceof Date) {
-                        return dateVal.toISOString().split('T')[0];
+                        // Sử dụng UTC để tránh lỗi timezone
+                        const y = dateVal.getUTCFullYear();
+                        const m = String(dateVal.getUTCMonth() + 1).padStart(2, '0');
+                        const d = String(dateVal.getUTCDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
                     }
 
                     if (typeof dateVal === 'number') {
-                        // Excel serial number
-                        const d = new Date((dateVal - 25569) * 86400 * 1000);
-                        return d.toISOString().split('T')[0];
+                        // Excel serial number - sử dụng UTC để tránh lỗi timezone
+                        const excelEpoch = new Date(1899, 11, 30);
+                        const date = new Date(excelEpoch.getTime() + dateVal * 24 * 60 * 60 * 1000);
+                        const y = date.getUTCFullYear();
+                        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+                        const d = String(date.getUTCDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
                     }
 
                     if (typeof dateVal === 'string') {
@@ -251,8 +259,12 @@ export const RewardsList = () => {
                             return `${ddmmyyyy[3]}-${ddmmyyyy[2].padStart(2, '0')}-${ddmmyyyy[1].padStart(2, '0')}`;
                         }
                         // Handle standard YYYY-MM-DD
-                        if (dateVal.match(/^\d{4}-\d{2}-\d{2}/)) {
-                            return dateVal.split('T')[0];
+                        if (dateVal.match(/^\d{4}-\d{1,2}-\d{1,2}/)) {
+                            const parts = dateVal.split('-');
+                            const year = parts[0];
+                            const month = parts[1].padStart(2, '0');
+                            const day = parts[2].padStart(2, '0');
+                            return `${year}-${month}-${day}`;
                         }
                     }
 
