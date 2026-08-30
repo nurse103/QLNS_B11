@@ -77,6 +77,7 @@ export const PersonnelList = () => {
 
     // Form State
     const [formData, setFormData] = useState<Partial<Employee>>({});
+    const [submitting, setSubmitting] = useState(false);
     const [familyList, setFamilyList] = useState<Family[]>([]);
     const [workHistoryList, setWorkHistoryList] = useState<WorkHistory[]>([]);
     const [trainingList, setTrainingList] = useState<Training[]>([]);
@@ -191,6 +192,10 @@ export const PersonnelList = () => {
             alert("Vui lòng nhập họ và tên");
             return;
         }
+        // Chặn bấm Lưu nhiều lần: hai lần lưu chạy song song sẽ nhân đôi
+        // các bảng quá trình công tác / đào tạo / gia đình.
+        if (submitting) return;
+        setSubmitting(true);
 
         try {
             if (formData.id) {
@@ -212,6 +217,8 @@ export const PersonnelList = () => {
         } catch (error) {
             console.error("Failed to create personnel:", error);
             alert("Có lỗi xảy ra khi lưu nhân viên.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -1062,6 +1069,18 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">SĐT</label>
                                                     <input type="text" value={tempFamily.so_dien_thoai || ''} onChange={e => setTempFamily({ ...tempFamily, so_dien_thoai: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-slate-700">Quê quán</label>
+                                                    <input type="text" value={tempFamily.que_quan || ''} onChange={e => setTempFamily({ ...tempFamily, que_quan: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-medium text-slate-700">Nơi ở hiện nay</label>
+                                                    <input type="text" value={tempFamily.noi_o_hien_nay || ''} onChange={e => setTempFamily({ ...tempFamily, noi_o_hien_nay: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                                                </div>
+                                                <div className="space-y-2 col-span-1 md:col-span-2">
+                                                    <label className="text-sm font-medium text-slate-700">Chức danh, chức vụ, đơn vị công tác</label>
+                                                    <input type="text" value={tempFamily.chuc_vu_don_vi || ''} onChange={e => setTempFamily({ ...tempFamily, chuc_vu_don_vi: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                                                </div>
                                                 <div className="col-span-1 md:col-span-2">
                                                     <button
                                                         type="button"
@@ -1259,8 +1278,8 @@ export const PersonnelList = () => {
                             {/* Footer Actions */}
                             <div className="p-4 border-t border-slate-100 bg-white shrink-0 flex justify-end gap-3">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium">Hủy</button>
-                                <button form="employee-form" type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 flex items-center gap-2">
-                                    <Save size={18} /> Lưu
+                                <button form="employee-form" type="submit" disabled={submitting} className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2">
+                                    <Save size={18} /> {submitting ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                             </div>
                         </div>

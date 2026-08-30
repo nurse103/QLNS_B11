@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { compressImage } from '../utils/imageCompress';
 
 export interface Employee {
     id: number;
@@ -102,6 +103,12 @@ export interface Family {
     ho_va_ten: string;
     nam_sinh?: number;
     nghe_nghiep?: string;
+    /** Quê quán (mục 29 Phiếu đảng viên) */
+    que_quan?: string;
+    /** Nơi ở hiện nay, trong hoặc ngoài nước (mục 29 Phiếu đảng viên) */
+    noi_o_hien_nay?: string;
+    /** Chức danh, chức vụ, đơn vị công tác (mục 29 Phiếu đảng viên) */
+    chuc_vu_don_vi?: string;
     so_dien_thoai?: string;
     ghi_chu?: string;
     created_by?: string | null;
@@ -316,20 +323,40 @@ export const updatePersonnel = async (
     // Actually, simplest strategy for "lists" like this is often Delete All + Insert All for the related tables 
     // IF the user doesn't care about preserving specific IDs of child records.
 
+    // Đồng bộ bảng con theo thứ tự CHÈN TRƯỚC - XOÁ SAU.
+    //
+    // Trước đây hàm này xoá hết rồi mới chèn, và lỗi chèn chỉ được console.error.
+    // Hậu quả: chỉ cần payload có một cột không tồn tại là toàn bộ dữ liệu cũ
+    // bị xoá sạch trong im lặng còn người dùng vẫn thấy báo "Cập nhật thành công".
+    // Nay chèn thành công mới xoá dòng cũ, và mọi lỗi đều được ném ra ngoài.
     const syncTable = async (table: string, items: any[]) => {
-        // Delete all for this employee
-        const { error: delError } = await supabase.from(table).delete().eq('dsnv_id', id);
-        if (delError) console.error(`Error deleting from ${table}:`, delError);
+        const { data: existing, error: readError } = await supabase
+            .from(table)
+            .select('id')
+            .eq('dsnv_id', id);
+        if (readError) throw readError;
+        const oldIds = (existing ?? []).map((row: any) => row.id);
 
-        // Insert all fresh
         if (items.length > 0) {
             const sanitizedItems = sanitizeData(items);
             const records = sanitizedItems.map(item => {
-                const { id: _, ...rest } = item; // Remove ID to let DB generate new ones
+                // Bỏ id và created_at để DB tự sinh
+                const { id: _id, created_at: _createdAt, ...rest } = item;
                 return { ...rest, dsnv_id: id };
             });
             const { error: insError } = await supabase.from(table).insert(records);
-            if (insError) console.error(`Error inserting into ${table}:`, insError);
+            if (insError) {
+                console.error(`Error inserting into ${table}:`, insError);
+                throw insError;
+            }
+        }
+
+        if (oldIds.length > 0) {
+            const { error: delError } = await supabase.from(table).delete().in('id', oldIds);
+            if (delError) {
+                console.error(`Error deleting from ${table}:`, delError);
+                throw delError;
+            }
         }
     };
 
@@ -353,16 +380,42 @@ export const deletePersonnel = async (id: number) => {
     }
 };
 
-export const uploadPartyCardImage = async (file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+/**
+ * Tải ảnh chân dung (ảnh 3x4 dùng cho phiếu đảng viên) lên storage.
+ * Dùng chung bucket 'the_dang' đã có sẵn, để trong thư mục con 'avatar/'
+ * nên không cần tạo bucket hay policy mới.
+ */
+export const uploadAvatarImage = async (file: File) => {
+    // Ảnh 3x4 in trên phiếu chỉ cần ~600x800px, nén trước cho nhẹ file .docx
+    const compressed = await compressImage(file, { maxWidth: 600, maxHeight: 800, quality: 0.82 });
+    const fileExt = compressed.name.split('.').pop() || 'jpg';
+    const filePath = `avatar/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
         .from('the_dang')
-        .upload(filePath, file);
+        .upload(filePath, compressed, { contentType: compressed.type, upsert: false });
 
     if (uploadError) {
+        console.error('Lỗi tải ảnh chân dung:', uploadError);
+        throw uploadError;
+    }
+
+    const { data } = supabase.storage.from('the_dang').getPublicUrl(filePath);
+    return data.publicUrl;
+};
+
+export const uploadPartyCardImage = async (file: File) => {
+    // Ảnh thẻ Đảng chỉ để xem lại, 1200px là quá đủ
+    const compressed = await compressImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.85 });
+    const fileExt = compressed.name.split('.').pop() || 'jpg';
+    const filePath = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from('the_dang')
+        .upload(filePath, compressed, { contentType: compressed.type, upsert: false });
+
+    if (uploadError) {
+        console.error('Lỗi tải ảnh thẻ Đảng:', uploadError);
         throw uploadError;
     }
 

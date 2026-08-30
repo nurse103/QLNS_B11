@@ -1,42 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { getPersonnel, getEmployeeDetails, Employee, Family, WorkHistory, Training, Salary } from '../services/personnelService';
-import { Search, Filter, BookOpen, Flag, Image as ImageIcon, User } from 'lucide-react';
-import { EmployeeDetailsModal } from './EmployeeDetailsModal';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getPersonnel, Employee } from '../services/personnelService';
+import { Search, Filter, BookOpen, Flag, Image as ImageIcon } from 'lucide-react';
+import { PartyCardPreview } from './PartyCardPreview';
+import { PartyProfileModal } from './PartyProfileModal';
+import { usePermissions } from '../hooks/usePermissions';
 
 export const PartyModule = () => {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewData, setViewData] = useState<{
-        employee: Employee;
-        family: Family[];
-        workHistory: WorkHistory[];
-        training: Training[];
-        salary: Salary[];
-    } | null>(null);
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    // Xem chi tiết = xem trước bản Word sẽ xuất ra
+    const [previewEmployee, setPreviewEmployee] = useState<Employee | null>(null);
+    // Modal nhập liệu, mở từ nút "Sửa phiếu" trong bản xem trước
+    const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
+    const permissions = usePermissions('party-management');
+
+    // Tải lại danh sách - dùng cả khi mở trang và sau khi lưu phiếu đảng viên
+    // (phiếu có thể sửa ngược thông tin cá nhân trong dsnv).
+    const refreshMembers = useCallback(async () => {
+        try {
+            const data = await getPersonnel();
+
+            // Filter only employees who have joined the Party (ngay_vao_dang is not null/empty)
+            // And only show active/relevant statuses
+            const activeStatuses = ['Đang làm việc', 'Đang học việc', 'Tạm nghỉ việc'];
+            const partyMembers = data.filter(emp => emp.ngay_vao_dang && emp.trang_thai && activeStatuses.includes(emp.trang_thai));
+            setEmployees(partyMembers);
+        } catch (error) {
+            console.error("Error fetching party members:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                console.log("PartyModule: start fetching"); // Debug log
-                const data = await getPersonnel();
-                console.log("PartyModule: fetched data", data.length); // Debug log
-
-                // Filter only employees who have joined the Party (ngay_vao_dang is not null/empty)
-                // And only show active/relevant statuses
-                const activeStatuses = ['Đang làm việc', 'Đang học việc', 'Tạm nghỉ việc'];
-                const partyMembers = data.filter(emp => emp.ngay_vao_dang && emp.trang_thai && activeStatuses.includes(emp.trang_thai));
-                console.log("PartyModule: filtered members", partyMembers); // Debug log
-                setEmployees(partyMembers);
-            } catch (error) {
-                console.error("Error fetching party members:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []);
+        refreshMembers();
+    }, [refreshMembers]);
 
     const [filterType, setFilterType] = useState<'all' | 'doctor' | 'nurse'>('all');
 
@@ -88,16 +87,7 @@ export const PartyModule = () => {
         return ageB - ageA;
     });
 
-    const handleView = async (emp: Employee) => {
-        try {
-            const details = await getEmployeeDetails(emp.id);
-            setViewData(details);
-            setIsViewModalOpen(true);
-        } catch (error) {
-            console.error("Failed to fetch details for view:", error);
-            alert("Không thể tải thông tin chi tiết.");
-        }
-    };
+    const handleView = (emp: Employee) => setPreviewEmployee(emp);
 
     return (
         <div className="p-6 space-y-6 animate-fade-in">
@@ -293,17 +283,26 @@ export const PartyModule = () => {
                 )}
             </div>
 
-            {/* View Detail Modal */}
-            {isViewModalOpen && viewData && (
-                <EmployeeDetailsModal
-                    employee={viewData.employee}
-                    family={viewData.family}
-                    workHistory={viewData.workHistory}
-                    training={viewData.training}
-                    salary={viewData.salary}
-                    onClose={() => setIsViewModalOpen(false)}
+            {/* Xem trước phiếu đảng viên (bố cục giống bản Word) */}
+            {previewEmployee && (
+                <PartyCardPreview
+                    employee={previewEmployee}
+                    canEdit={permissions.can_edit || permissions.can_add}
+                    onClose={() => setPreviewEmployee(null)}
+                    onEdit={() => setProfileEmployee(previewEmployee)}
                 />
             )}
+
+            {/* Modal nhập liệu phiếu đảng viên */}
+            {profileEmployee && (
+                <PartyProfileModal
+                    employee={profileEmployee}
+                    canEdit={permissions.can_edit || permissions.can_add}
+                    onClose={() => setProfileEmployee(null)}
+                    onSaved={refreshMembers}
+                />
+            )}
+
         </div>
     );
 };

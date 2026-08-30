@@ -219,6 +219,9 @@ export const FamilyModule = () => {
                                                                         <th className="px-4 py-3">Mối quan hệ</th>
                                                                         <th className="px-4 py-3">Năm sinh</th>
                                                                         <th className="px-4 py-3">Nghề nghiệp</th>
+                                                                        <th className="px-4 py-3">Quê quán</th>
+                                                                        <th className="px-4 py-3">Nơi ở hiện nay</th>
+                                                                        <th className="px-4 py-3">Chức vụ, đơn vị</th>
                                                                         <th className="px-4 py-3">Số điện thoại</th>
                                                                         <th className="px-4 py-3">Ghi chú</th>
                                                                         <th className="px-4 py-3 text-center">Thao tác</th>
@@ -231,6 +234,9 @@ export const FamilyModule = () => {
                                                                             <td className="px-4 py-3 font-medium text-pink-600">{r.moi_quan_he}</td>
                                                                             <td className="px-4 py-3 text-slate-600">{r.nam_sinh}</td>
                                                                             <td className="px-4 py-3 text-slate-600">{r.nghe_nghiep}</td>
+                                                                            <td className="px-4 py-3 text-slate-600 truncate max-w-[180px]">{r.que_quan}</td>
+                                                                            <td className="px-4 py-3 text-slate-600 truncate max-w-[180px]">{r.noi_o_hien_nay}</td>
+                                                                            <td className="px-4 py-3 text-slate-600 truncate max-w-[180px]">{r.chuc_vu_don_vi}</td>
                                                                             <td className="px-4 py-3 text-slate-600">{r.so_dien_thoai}</td>
                                                                             <td className="px-4 py-3 text-slate-400 italic truncate max-w-[150px]">{r.ghi_chu}</td>
                                                                             <td className="px-4 py-3 text-center">
@@ -288,6 +294,18 @@ export const FamilyModule = () => {
                             <div className="py-2 border-b border-slate-50">
                                 <span className="text-sm text-slate-500 block mb-1">Nghề nghiệp:</span>
                                 <span className="font-medium text-slate-700">{viewData.nghe_nghiep || 'N/A'}</span>
+                            </div>
+                            <div className="py-2 border-b border-slate-50">
+                                <span className="text-sm text-slate-500 block mb-1">Quê quán:</span>
+                                <span className="font-medium text-slate-700">{viewData.que_quan || 'N/A'}</span>
+                            </div>
+                            <div className="py-2 border-b border-slate-50">
+                                <span className="text-sm text-slate-500 block mb-1">Nơi ở hiện nay:</span>
+                                <span className="font-medium text-slate-700">{viewData.noi_o_hien_nay || 'N/A'}</span>
+                            </div>
+                            <div className="py-2 border-b border-slate-50">
+                                <span className="text-sm text-slate-500 block mb-1">Chức danh, chức vụ, đơn vị công tác:</span>
+                                <span className="font-medium text-slate-700">{viewData.chuc_vu_don_vi || 'N/A'}</span>
                             </div>
                             <div className="py-2">
                                 <span className="text-sm text-slate-500 block mb-1">Ghi chú:</span>
@@ -375,6 +393,18 @@ export const FamilyModule = () => {
                                 <div className="col-span-2 space-y-1">
                                     <label className="text-sm font-medium text-slate-700">Nghề nghiệp</label>
                                     <input type="text" value={formData.nghe_nghiep || ''} onChange={e => setFormData({ ...formData, nghe_nghiep: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-700">Quê quán</label>
+                                    <input type="text" value={formData.que_quan || ''} onChange={e => setFormData({ ...formData, que_quan: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-medium text-slate-700">Nơi ở hiện nay</label>
+                                    <input type="text" value={formData.noi_o_hien_nay || ''} onChange={e => setFormData({ ...formData, noi_o_hien_nay: e.target.value })} placeholder="Trong hoặc ngoài nước" className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]" />
+                                </div>
+                                <div className="col-span-2 space-y-1">
+                                    <label className="text-sm font-medium text-slate-700">Chức danh, chức vụ, đơn vị công tác</label>
+                                    <input type="text" value={formData.chuc_vu_don_vi || ''} onChange={e => setFormData({ ...formData, chuc_vu_don_vi: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]" />
                                 </div>
                                 <div className="col-span-2 space-y-1">
                                     <label className="text-sm font-medium text-slate-700">Ghi chú</label>

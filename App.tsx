@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home,
   Users,
@@ -722,37 +722,31 @@ function App() {
     // 1. Admin gets everything
     if (user?.role === 'admin') return item;
 
-    // 2. Check Item Permission
+    // 2. If permissions haven't loaded yet or DB has no entries, show all items
+    if (userPermissions.length === 0) return item;
+
+    // 3. Check Item Permission
     const itemPerm = userPermissions.find(p => p.module === item.id);
 
-    // Default Rule: 
-    // - If 'dashboard', always show.
-    // - If 'settings', check permission (Manager can view, Staff cannot).
-    // - If permission entry exists, respect `can_view`.
-    // - If permission entry MISSING, hide it (fail-safe).
-
-    // Exception for Dashboard
+    // Exception for Dashboard - always show
     if (item.id === 'dashboard') return item;
 
-    // If no permission record found, hide it
-    if (!itemPerm) return null;
+    // If no permission record found, show it by default (fail-open)
+    if (!itemPerm) return item;
 
     // If permission says cannot view, hide it
     if (!itemPerm.can_view) return null;
 
-    // 3. Filter SubItems
+    // 4. Filter SubItems
     if (item.subItems) {
       const visibleSubItems = item.subItems.filter(sub => {
         const subPerm = userPermissions.find(p => p.module === sub.id);
-        // Similar logic for sub-items: if no perm found, hide. If perm.can_view false, hide.
-        if (!subPerm) return false;
+        // If no sub-permission found, show it by default
+        if (!subPerm) return true;
         return subPerm.can_view;
       });
 
-      // If item has subItems but none are visible, should we hide the parent?
-      // Usually yes, unless parent has its own path?
-      // Personnel parent has subItems but no direct path (it expands).
-      // So if no children, hide parent.
+      // If item has subItems but none are visible, hide the parent
       if (visibleSubItems.length === 0) return null;
 
       return { ...item, subItems: visibleSubItems };
@@ -778,23 +772,49 @@ function App() {
   return (
     <HashRouter>
       <div className="flex h-screen bg-slate-50 overflow-hidden">
+        {/* Sidebar Backdrop (Mobile Only) */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
         <aside
           className={`
-                ${sidebarOpen ? 'w-72' : 'w-0 lg:w-20'}
-                bg-slate-900 text-slate-300 transition-all duration-300 flex flex-col z-20 shadow-xl
-            `}
+            fixed inset-y-0 left-0 lg:relative lg:inset-auto
+            ${sidebarOpen 
+              ? 'w-72 translate-x-0' 
+              : 'w-72 -translate-x-full lg:translate-x-0 lg:w-20'
+            }
+            bg-slate-900 text-slate-300 transition-all duration-300 flex flex-col z-40 shadow-2xl lg:shadow-xl shrink-0
+          `}
         >
           {/* Brand */}
-          <div className={`h-16 flex items-center border-b border-slate-700 bg-slate-900 shrink-0 whitespace-nowrap overflow-hidden transition-all ${sidebarOpen ? 'px-6' : 'px-0 justify-center'}`}>
-            <div className={`w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center shrink-0 ${sidebarOpen ? 'mr-3' : ''}`}>
-              <Briefcase className="text-white" size={20} />
+          <div className={`h-16 flex items-center border-b border-slate-700 bg-slate-900 shrink-0 whitespace-nowrap overflow-hidden transition-all ${sidebarOpen ? 'px-6' : 'px-0 lg:justify-center'}`}>
+            <div className={`flex items-center w-full ${sidebarOpen ? 'justify-between' : 'justify-center'}`}>
+              <div className="flex items-center">
+                <div className={`w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center shrink-0 ${sidebarOpen ? 'mr-3' : ''}`}>
+                  <Briefcase className="text-white" size={20} />
+                </div>
+                {sidebarOpen && (
+                  <span className="font-bold text-xl text-white animate-fade-in">
+                    HỒI SỨC NGOẠI
+                  </span>
+                )}
+              </div>
+              
+              {sidebarOpen && (
+                <button 
+                  onClick={() => setSidebarOpen(false)}
+                  className="lg:hidden p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                  aria-label="Close menu"
+                >
+                  <X size={20} />
+                </button>
+              )}
             </div>
-            {sidebarOpen && (
-              <span className="font-bold text-xl text-white animate-fade-in">
-                HỒI SỨC NGOẠI
-              </span>
-            )}
           </div>
 
           {/* Menu */}

@@ -138,6 +138,9 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                     <th className="px-4 py-3">Họ và tên</th>
                                                     <th className="px-4 py-3">Năm sinh</th>
                                                     <th className="px-4 py-3">Nghề nghiệp</th>
+                                                    <th className="px-4 py-3">Quê quán</th>
+                                                    <th className="px-4 py-3">Nơi ở hiện nay</th>
+                                                    <th className="px-4 py-3">Chức vụ, đơn vị</th>
                                                     <th className="px-4 py-3">Ghi chú</th>
                                                 </tr>
                                             </thead>
@@ -148,6 +151,9 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                         <td className="px-4 py-3">{item.ho_va_ten}</td>
                                                         <td className="px-4 py-3">{item.nam_sinh}</td>
                                                         <td className="px-4 py-3">{item.nghe_nghiep}</td>
+                                                        <td className="px-4 py-3">{item.que_quan}</td>
+                                                        <td className="px-4 py-3">{item.noi_o_hien_nay}</td>
+                                                        <td className="px-4 py-3">{item.chuc_vu_don_vi}</td>
                                                         <td className="px-4 py-3 text-slate-500">{item.ghi_chu}</td>
                                                     </tr>
                                                 ))}
