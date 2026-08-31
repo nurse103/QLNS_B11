@@ -12,7 +12,7 @@ import { exportPartyCard } from '../utils/partyCardExport';
 import { Employee, uploadAvatarImage } from '../services/personnelService';
 import { getAuthUser } from '../services/authService';
 import { canEditPersonnelRecord } from '../utils/ownershipUtils';
-import { X, Save, FileDown, Loader2, Info, Lock, Upload, ImageOff } from 'lucide-react';
+import { ArrowLeft, Save, FileDown, Loader2, Info, Lock, Upload, ImageOff } from 'lucide-react';
 
 interface PartyProfileModalProps {
     employee: Employee;
@@ -199,20 +199,27 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
     const personalReadOnly = !canEditPersonal;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm md:p-4">
-            <div className="bg-white md:rounded-2xl shadow-2xl w-full max-w-5xl h-full md:h-[92vh] flex flex-col overflow-hidden">
+        /* Bố cục phẳng: hiển thị thẳng trong trang, không dùng popup */
+        <div className="animate-fade-in">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="bg-red-600 text-white p-4 md:p-5 flex justify-between items-center shrink-0">
-                    <div>
-                        <h2 className="text-lg md:text-xl font-bold leading-tight">PHIẾU ĐẢNG VIÊN</h2>
-                        <p className="text-red-100 text-sm mt-0.5">
-                            {emp.ho_va_ten}
-                            {emp.chuc_vu ? ` — ${emp.chuc_vu}` : ''}
-                        </p>
+                <div className="bg-red-600 text-white p-4 md:p-5 flex justify-between items-center shrink-0 sticky top-0 z-10">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-lg bg-red-500/50 hover:bg-red-500/80 transition-colors shrink-0"
+                            title="Quay lại danh sách"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <div className="min-w-0">
+                            <h2 className="text-lg md:text-xl font-bold leading-tight">PHIẾU ĐẢNG VIÊN</h2>
+                            <p className="text-red-100 text-sm mt-0.5 truncate">
+                                {emp.ho_va_ten}
+                                {emp.chuc_vu ? ` — ${emp.chuc_vu}` : ''}
+                            </p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-red-500/60 transition-colors">
-                        <X size={22} />
-                    </button>
                 </div>
 
                 {/* Tabs */}
@@ -233,7 +240,7 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+                <div className="p-4 md:p-6 space-y-4">
                     {loading ? (
                         <div className="flex items-center justify-center h-40 text-slate-500 gap-2">
                             <Loader2 className="animate-spin" size={18} /> Đang tải hồ sơ...
@@ -657,7 +664,7 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
                         onClick={onClose}
                         className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-100"
                     >
-                        Đóng
+                        Quay lại danh sách
                     </button>
                 </div>
             </div>

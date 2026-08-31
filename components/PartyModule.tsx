@@ -97,6 +97,34 @@ export const PartyModule = () => {
 
     const fmtDate = (value: string | null) => (value ? new Date(value).toLocaleDateString('vi-VN') : '-');
 
+    // Xem/sửa chi tiết hiển thị phẳng ngay trong trang (thay chỗ danh sách),
+    // không mở popup. Đóng phiếu nhập liệu sẽ quay về bản xem trước nếu đang mở.
+    if (profileEmployee) {
+        return (
+            <div className="p-4 md:p-6">
+                <PartyProfileModal
+                    employee={profileEmployee}
+                    canEdit={canEditEmployee(profileEmployee)}
+                    onClose={() => setProfileEmployee(null)}
+                    onSaved={refreshMembers}
+                />
+            </div>
+        );
+    }
+
+    if (previewEmployee) {
+        return (
+            <div className="p-4 md:p-6">
+                <PartyCardPreview
+                    employee={previewEmployee}
+                    canEdit={canEditEmployee(previewEmployee)}
+                    onClose={() => setPreviewEmployee(null)}
+                    onEdit={() => setProfileEmployee(previewEmployee)}
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="p-6 space-y-6 animate-fade-in">
             <div className="flex justify-between items-end">
@@ -298,26 +326,6 @@ export const PartyModule = () => {
                     </div>
                 )}
             </div>
-
-            {/* Xem trước phiếu đảng viên (bố cục giống bản Word) */}
-            {previewEmployee && (
-                <PartyCardPreview
-                    employee={previewEmployee}
-                    canEdit={canEditEmployee(previewEmployee)}
-                    onClose={() => setPreviewEmployee(null)}
-                    onEdit={() => setProfileEmployee(previewEmployee)}
-                />
-            )}
-
-            {/* Modal nhập liệu phiếu đảng viên */}
-            {profileEmployee && (
-                <PartyProfileModal
-                    employee={profileEmployee}
-                    canEdit={canEditEmployee(profileEmployee)}
-                    onClose={() => setProfileEmployee(null)}
-                    onSaved={refreshMembers}
-                />
-            )}
 
         </div>
     );

@@ -17,7 +17,10 @@ import {
     History,
     BadgeCheck,
     HeartPulse,
-    User
+    User,
+    Upload,
+    Loader2,
+    ImageOff
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './EmployeeDetailsModal';
@@ -31,6 +34,7 @@ import {
     deletePersonnel,
     getEmployeeDetails,
     uploadPartyCardImage,
+    uploadAvatarImage,
     Employee,
     Family,
     WorkHistory,
@@ -77,6 +81,9 @@ export const PersonnelList = () => {
 
     // Form State
     const [formData, setFormData] = useState<Partial<Employee>>({});
+    // Ảnh chân dung 3x4: dùng chung một cột dsnv.avatar và một bucket 'the_dang'
+    // với ảnh 3x4 trên Phiếu đảng viên, nên sửa bên nào cũng đồng bộ bên kia.
+    const [avatarUploading, setAvatarUploading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [familyList, setFamilyList] = useState<Family[]>([]);
     const [workHistoryList, setWorkHistoryList] = useState<WorkHistory[]>([]);
@@ -184,6 +191,31 @@ export const PersonnelList = () => {
         }
 
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    /**
+     * Tải ảnh chân dung 3x4 lên bucket 'the_dang' (thư mục avatar/) và ghi vào
+     * dsnv.avatar - đúng cột mà Phiếu đảng viên đang dùng, nên ảnh dùng chung.
+     */
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setAvatarUploading(true);
+        try {
+            const url = await uploadAvatarImage(file);
+            setFormData(prev => ({ ...prev, avatar: url }));
+        } catch (err: any) {
+            console.error(err);
+            const msg = String(err?.message ?? '');
+            alert(
+                msg.includes('row-level security')
+                    ? 'Tải ảnh thất bại: bucket "the_dang" chưa cho phép ghi. Chạy file fix_the_dang_storage.sql trong Supabase SQL Editor.'
+                    : `Lỗi tải ảnh lên. ${msg}`
+            );
+        } finally {
+            setAvatarUploading(false);
+            e.target.value = '';
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -548,9 +580,17 @@ export const PersonnelList = () => {
                                                             checked={selectedIds.has(employee.id)}
                                                             onChange={() => toggleSelection(employee.id)}
                                                         />
-                                                        <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs">
-                                                            {employee.ho_va_ten?.charAt(0)}
-                                                        </div>
+                                                        {employee.avatar ? (
+                                                            <img
+                                                                src={employee.avatar}
+                                                                alt={employee.ho_va_ten}
+                                                                className="w-8 h-8 rounded-full object-cover border border-slate-200 bg-slate-100"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs">
+                                                                {employee.ho_va_ten?.charAt(0)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -639,7 +679,15 @@ export const PersonnelList = () => {
                                         </div>
 
                                         {/* Row 1: Name and Status */}
-                                        <div className="pr-10">
+                                        <div className="pr-10 flex items-start gap-3">
+                                            {employee.avatar && (
+                                                <img
+                                                    src={employee.avatar}
+                                                    alt={employee.ho_va_ten}
+                                                    className="w-11 h-14 shrink-0 rounded object-cover border border-slate-200 bg-slate-100"
+                                                />
+                                            )}
+                                            <div>
                                             <h3 className="font-bold text-slate-800 text-base">{employee.ho_va_ten}</h3>
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium mt-1 ${employee.trang_thai === 'Đang làm việc' ? 'bg-green-50 text-green-700 border border-green-100' :
                                                 employee.trang_thai === 'Tăng cường' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
@@ -648,6 +696,7 @@ export const PersonnelList = () => {
                                                 }`}>
                                                 {employee.trang_thai || 'Chưa cập nhật'}
                                             </span>
+                                            </div>
                                         </div>
 
                                         {/* Row 2: Info Grid */}
@@ -839,6 +888,42 @@ export const PersonnelList = () => {
                                                     Thông tin cơ bản
                                                 </h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Ảnh chân dung 3x4 - dùng chung với ảnh 3x4 của Phiếu đảng viên
+                                                        (cùng cột dsnv.avatar, cùng bucket 'the_dang'). */}
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <label className="text-sm font-medium text-slate-700">Ảnh chân dung (3x4)</label>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-[90px] h-[120px] shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                                                                {formData.avatar ? (
+                                                                    <img src={formData.avatar} alt="Ảnh 3x4" className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <div className="flex flex-col items-center gap-1 text-slate-300">
+                                                                        <ImageOff size={22} />
+                                                                        <span className="text-[10px]">Chưa có ảnh</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium cursor-pointer hover:bg-blue-700">
+                                                                    {avatarUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                                                                    {formData.avatar ? 'Đổi ảnh' : 'Tải ảnh lên'}
+                                                                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={handleAvatarUpload} disabled={avatarUploading} />
+                                                                </label>
+                                                                {formData.avatar && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setFormData(prev => ({ ...prev, avatar: null }))}
+                                                                        className="ml-2 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50"
+                                                                    >
+                                                                        Xoá ảnh
+                                                                    </button>
+                                                                )}
+                                                                <p className="text-xs text-slate-400">
+                                                                    Ảnh này đồng thời là ảnh 3x4 in trên Phiếu đảng viên.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-slate-700">Họ và tên <span className="text-red-500">*</span></label>
                                                         <input type="text" name="ho_va_ten" value={formData.ho_va_ten || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" required />

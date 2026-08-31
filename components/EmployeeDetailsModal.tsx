@@ -50,7 +50,20 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
             <div className="bg-white md:rounded-2xl rounded-none shadow-2xl w-full max-w-4xl h-full md:h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="bg-slate-50 border-b border-slate-200 p-4 md:p-6 flex justify-between items-center shrink-0">
-                    <div className="flex flex-col">
+                    <div className="flex items-center gap-4 min-w-0">
+                        {/* Ảnh 3x4 dùng chung với Phiếu đảng viên (cột dsnv.avatar) */}
+                        {employee.avatar ? (
+                            <img
+                                src={employee.avatar}
+                                alt={employee.ho_va_ten}
+                                className="w-14 h-[74px] md:w-[66px] md:h-[88px] shrink-0 rounded-lg object-cover border border-slate-200 bg-white shadow-sm"
+                            />
+                        ) : (
+                            <div className="w-14 h-[74px] md:w-[66px] md:h-[88px] shrink-0 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-300 shadow-sm">
+                                <User size={26} />
+                            </div>
+                        )}
+                    <div className="flex flex-col min-w-0">
                         <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">{employee.ho_va_ten}</h2>
                         <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-slate-500 mt-1.5">
                             <span className="flex items-center gap-1 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm"><Shield size={12} className="text-blue-500" /> {employee.cap_bac || '---'}</span>
@@ -60,6 +73,7 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                 <Activity size={14} /> {employee.trang_thai || '---'}
                             </span>
                         </div>
+                    </div>
                     </div>
                     <button onClick={onClose} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all border border-transparent hover:border-red-100 shrink-0">
                         <X size={24} />

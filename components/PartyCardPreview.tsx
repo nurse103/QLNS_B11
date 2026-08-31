@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getPartyDossier, PartyDossier, HUY_HIEU_DANG_MOC } from '../services/partyService';
 import { exportPartyCard } from '../utils/partyCardExport';
 import { Employee } from '../services/personnelService';
-import { X, FileDown, Loader2, Pencil, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowLeft, FileDown, Loader2, Pencil, Maximize2, Minimize2 } from 'lucide-react';
 
 interface PartyCardPreviewProps {
     employee: Employee;
@@ -210,17 +210,27 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
     })();
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/70 backdrop-blur-sm">
-            {/* Thanh công cụ */}
-            <div className="bg-white border-b border-slate-200 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0 shadow-sm">
-                <div className="min-w-0">
-                    <h2 className="font-bold text-slate-800 leading-tight truncate">
-                        Xem trước phiếu đảng viên
-                    </h2>
-                    <p className="text-xs text-slate-500 truncate">
-                        {e.ho_va_ten}
-                        {e.chuc_vu ? ` — ${e.chuc_vu}` : ''}
-                    </p>
+        /* Bố cục phẳng: nằm thẳng trong trang Quản lý Đảng viên, không phải popup */
+        <div className="flex flex-col rounded-xl border border-slate-200 bg-slate-100 overflow-hidden shadow-sm animate-fade-in">
+            {/* Thanh công cụ - dính trên đầu khi cuộn trang */}
+            <div className="bg-white border-b border-slate-200 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0 shadow-sm sticky top-0 z-10">
+                <div className="min-w-0 flex items-center gap-3">
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0"
+                        title="Quay lại danh sách"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div className="min-w-0">
+                        <h2 className="font-bold text-slate-800 leading-tight truncate">
+                            Xem trước phiếu đảng viên
+                        </h2>
+                        <p className="text-xs text-slate-500 truncate">
+                            {e.ho_va_ten}
+                            {e.chuc_vu ? ` — ${e.chuc_vu}` : ''}
+                        </p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     {fitScale < 1 && (
@@ -251,19 +261,13 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                             <span className="sm:hidden">Sửa</span>
                         </button>
                     )}
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                    >
-                        <X size={22} />
-                    </button>
                 </div>
             </div>
 
             {/* Trang A4 */}
-            <div ref={areaRef} className="flex-1 overflow-auto p-2 sm:p-4 md:p-8">
+            <div ref={areaRef} className="overflow-x-auto p-2 sm:p-4 md:p-8">
                 {loading ? (
-                    <div className="flex items-center justify-center h-40 text-white gap-2">
+                    <div className="flex items-center justify-center h-40 text-slate-500 gap-2">
                         <Loader2 className="animate-spin" size={18} /> Đang tải hồ sơ...
                     </div>
                 ) : (
