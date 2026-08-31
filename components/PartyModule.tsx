@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getPersonnel, Employee } from '../services/personnelService';
-import { Search, Filter, BookOpen, Flag, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, BookOpen, Flag, Image as ImageIcon, Eye, Pencil } from 'lucide-react';
 import { PartyCardPreview } from './PartyCardPreview';
 import { PartyProfileModal } from './PartyProfileModal';
-import { usePermissions } from '../hooks/usePermissions';
+import { getAuthUser } from '../services/authService';
+import { canEditPersonnelRecord } from '../utils/ownershipUtils';
 
 export const PartyModule = () => {
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -13,7 +14,7 @@ export const PartyModule = () => {
     const [previewEmployee, setPreviewEmployee] = useState<Employee | null>(null);
     // Modal nhập liệu, mở từ nút "Sửa phiếu" trong bản xem trước
     const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
-    const permissions = usePermissions('party-management');
+    const authUser = useMemo(() => getAuthUser(), []);
 
     // Tải lại danh sách - dùng cả khi mở trang và sau khi lưu phiếu đảng viên
     // (phiếu có thể sửa ngược thông tin cá nhân trong dsnv).
@@ -88,6 +89,13 @@ export const PartyModule = () => {
     });
 
     const handleView = (emp: Employee) => setPreviewEmployee(emp);
+    // Mở thẳng phiếu nhập liệu, không phải đi qua bản xem trước
+    const handleEdit = (emp: Employee) => setProfileEmployee(emp);
+    // Nút sửa bám theo tài khoản đang đăng nhập:
+    // admin sửa được mọi hồ sơ, người khác chỉ sửa hồ sơ mang đúng họ tên của mình.
+    const canEditEmployee = (emp: Employee) => canEditPersonnelRecord(emp, authUser);
+
+    const fmtDate = (value: string | null) => (value ? new Date(value).toLocaleDateString('vi-VN') : '-');
 
     return (
         <div className="p-6 space-y-6 animate-fade-in">
@@ -178,6 +186,7 @@ export const PartyModule = () => {
                                     <th className="px-6 py-3">Ngày chính thức</th>
                                     <th className="px-6 py-3">Số thẻ Đảng</th>
                                     <th className="px-6 py-3 text-center">Ảnh thẻ Đảng</th>
+                                    <th className="px-6 py-3 text-center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -221,11 +230,29 @@ export const PartyModule = () => {
                                                     </span>
                                                 )}
                                             </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <button
+                                                        onClick={() => handleView(emp)}
+                                                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-xs font-medium hover:bg-slate-50 flex items-center gap-1.5"
+                                                    >
+                                                        <Eye size={14} /> Xem
+                                                    </button>
+                                                    {canEditEmployee(emp) && (
+                                                        <button
+                                                            onClick={() => handleEdit(emp)}
+                                                            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"
+                                                        >
+                                                            <Pencil size={14} /> Sửa
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                                        <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                                             <div className="flex flex-col items-center gap-2">
                                                 <Flag className="w-12 h-12 text-slate-300" />
                                                 <p className="font-medium text-lg">Chưa có dữ liệu đảng viên</p>
@@ -236,49 +263,38 @@ export const PartyModule = () => {
                             </tbody>
                         </table>
 
-                        {/* Mobile Table: 4 columns - Visible only on mobile */}
-                        <table className="w-full text-[12px] text-left md:hidden bg-white">
-                            <thead className="bg-red-600 text-white font-medium uppercase tracking-wider">
-                                <tr>
-                                    <th className="px-2 py-2 w-10 text-center border-r border-red-500/30">STT</th>
-                                    <th className="px-3 py-2 border-r border-red-500/30">Họ và tên</th>
-                                    <th className="px-2 py-2 text-center w-16 border-r border-red-500/30">Tuổi đảng</th>
-                                    <th className="px-2 py-2 text-center w-24">Ngày vào</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {sortedEmployees.length > 0 ? (
-                                    sortedEmployees.map((emp, index) => (
-                                        <tr key={emp.id} className="active:bg-slate-100 transition-colors">
-                                            <td className="px-2 py-3 text-center font-medium text-slate-400 border-r border-slate-50">{index + 1}</td>
-                                            <td className="px-3 py-3 font-bold text-slate-800 border-r border-slate-50">
+                        {/* Mobile: danh sách card gọn - họ tên, ngày vào Đảng, nút Xem/Sửa */}
+                        <div className="md:hidden divide-y divide-slate-100">
+                            {sortedEmployees.length > 0 ? (
+                                sortedEmployees.map(emp => (
+                                    <div key={emp.id} className="p-4">
+                                        <p className="font-bold text-slate-800 leading-tight">{emp.ho_va_ten}</p>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Ngày vào Đảng:{' '}
+                                            <span className="font-medium text-slate-700">{fmtDate(emp.ngay_vao_dang)}</span>
+                                        </p>
+                                        <div className="flex gap-2 mt-3">
+                                            <button
+                                                onClick={() => handleView(emp)}
+                                                className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium active:bg-slate-100 flex items-center justify-center gap-1.5"
+                                            >
+                                                <Eye size={16} /> Xem
+                                            </button>
+                                            {canEditEmployee(emp) && (
                                                 <button
-                                                    onClick={() => handleView(emp)}
-                                                    className="w-full text-left flex flex-col items-start gap-1"
+                                                    onClick={() => handleEdit(emp)}
+                                                    className="flex-1 px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium active:bg-red-700 flex items-center justify-center gap-1.5"
                                                 >
-                                                    <span className="text-blue-700 leading-tight border-b border-blue-200/50">{emp.ho_va_ten}</span>
-                                                    <span className="text-[10px] font-normal text-slate-500 bg-slate-50 px-1 py-0.5 rounded leading-none shrink-0 truncate max-w-[120px]">
-                                                        {emp.chuc_vu}
-                                                    </span>
+                                                    <Pencil size={16} /> Sửa
                                                 </button>
-                                            </td>
-                                            <td className="px-2 py-3 text-center font-black text-red-600 border-r border-slate-50">
-                                                {getPartyAge(emp.ngay_vao_dang)}
-                                            </td>
-                                            <td className="px-2 py-3 text-center text-slate-600 font-medium">
-                                                {emp.ngay_vao_dang ? new Date(emp.ngay_vao_dang).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'}
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic">
-                                            Chưa có dữ liệu đảng viên
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="px-4 py-8 text-center text-slate-400 italic">Chưa có dữ liệu đảng viên</div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -287,7 +303,7 @@ export const PartyModule = () => {
             {previewEmployee && (
                 <PartyCardPreview
                     employee={previewEmployee}
-                    canEdit={permissions.can_edit || permissions.can_add}
+                    canEdit={canEditEmployee(previewEmployee)}
                     onClose={() => setPreviewEmployee(null)}
                     onEdit={() => setProfileEmployee(previewEmployee)}
                 />
@@ -297,7 +313,7 @@ export const PartyModule = () => {
             {profileEmployee && (
                 <PartyProfileModal
                     employee={profileEmployee}
-                    canEdit={permissions.can_edit || permissions.can_add}
+                    canEdit={canEditEmployee(profileEmployee)}
                     onClose={() => setProfileEmployee(null)}
                     onSaved={refreshMembers}
                 />

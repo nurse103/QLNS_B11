@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getPartyDossier, PartyDossier, HUY_HIEU_DANG_MOC } from '../services/partyService';
 import { exportPartyCard } from '../utils/partyCardExport';
 import { Employee } from '../services/personnelService';
-import { X, FileDown, Loader2, Pencil } from 'lucide-react';
+import { X, FileDown, Loader2, Pencil, Maximize2, Minimize2 } from 'lucide-react';
 
 interface PartyCardPreviewProps {
     employee: Employee;
@@ -27,6 +27,10 @@ const fmtMonthYear = (value?: string | null) => {
 };
 
 const DATE_SLOT = '...../...../.........';
+
+// Kích thước trang A4 @96dpi - dùng để thu nhỏ vừa màn hình hẹp
+const A4_WIDTH = 794; // 21cm
+const A4_MIN_HEIGHT = 1123; // 29,7cm
 
 // ------------------------------------------------------- Thành phần bố cục
 /** Đường chấm kéo dài phần còn lại của dòng - giống dot leader trong Word. */
@@ -125,6 +129,13 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
     const [dossier, setDossier] = useState<PartyDossier | null>(null);
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
+    // Trên màn hình hẹp, trang A4 (794px) tràn ngang -> thu nhỏ cho vừa bề ngang
+    const [availWidth, setAvailWidth] = useState(A4_WIDTH);
+    const [zoomMode, setZoomMode] = useState<'fit' | 'full'>('fit');
+    // Bề rộng thật có thể lớn hơn khổ A4 nếu một bảng bên trong bị tràn
+    const [pageSize, setPageSize] = useState({ w: A4_WIDTH, h: A4_MIN_HEIGHT });
+    const areaRef = useRef<HTMLDivElement>(null);
+    const pageRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -144,6 +155,33 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
         };
     }, [employee.id]);
 
+    // Bề ngang khả dụng của vùng xem (đã trừ padding)
+    useEffect(() => {
+        const el = areaRef.current;
+        if (!el) return;
+        const update = () => {
+            const cs = getComputedStyle(el);
+            const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            if (w > 0) setAvailWidth(w);
+        };
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
+    // Kích thước thật của trang (nội dung có thể dài/rộng hơn một trang A4)
+    useEffect(() => {
+        const el = pageRef.current;
+        if (!el) return;
+        const update = () =>
+            setPageSize({ w: Math.max(A4_WIDTH, el.scrollWidth), h: Math.max(A4_MIN_HEIGHT, el.offsetHeight) });
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [loading]);
+
     const handleExport = async () => {
         if (!dossier) return;
         setExporting(true);
@@ -162,6 +200,10 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
     const e = dossier?.employee ?? employee;
     const p = dossier?.profile ?? { dsnv_id: employee.id };
 
+    // Tỉ lệ đang áp dụng cho trang A4
+    const fitScale = Math.min(1, availWidth / pageSize.w);
+    const scale = zoomMode === 'fit' ? fitScale : 1;
+
     const signDate = (() => {
         const m = String(p.ngay_khai ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
         return m ? `ngày ${m[3]} tháng ${m[2]} năm ${m[1]}` : 'ngày ...... tháng ...... năm 20......';
@@ -170,7 +212,7 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
     return (
         <div className="fixed inset-0 z-50 flex flex-col bg-black/70 backdrop-blur-sm">
             {/* Thanh công cụ */}
-            <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0 shadow-sm">
+            <div className="bg-white border-b border-slate-200 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0 shadow-sm">
                 <div className="min-w-0">
                     <h2 className="font-bold text-slate-800 leading-tight truncate">
                         Xem trước phiếu đảng viên
@@ -180,7 +222,16 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                         {e.chuc_vu ? ` — ${e.chuc_vu}` : ''}
                     </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    {fitScale < 1 && (
+                        <button
+                            onClick={() => setZoomMode(m => (m === 'fit' ? 'full' : 'fit'))}
+                            className="px-3 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 flex items-center gap-2"
+                        >
+                            {zoomMode === 'fit' ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+                            <span>{zoomMode === 'fit' ? 'Cỡ thật' : 'Vừa màn hình'}</span>
+                        </button>
+                    )}
                     <button
                         onClick={handleExport}
                         disabled={loading || exporting}
@@ -197,6 +248,7 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                         >
                             <Pencil size={16} />
                             <span className="hidden sm:inline">Sửa phiếu</span>
+                            <span className="sm:hidden">Sửa</span>
                         </button>
                     )}
                     <button
@@ -209,17 +261,24 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
             </div>
 
             {/* Trang A4 */}
-            <div className="flex-1 overflow-auto p-4 md:p-8">
+            <div ref={areaRef} className="flex-1 overflow-auto p-2 sm:p-4 md:p-8">
                 {loading ? (
                     <div className="flex items-center justify-center h-40 text-white gap-2">
                         <Loader2 className="animate-spin" size={18} /> Đang tải hồ sơ...
                     </div>
                 ) : (
                     <div
-                        className="bg-white mx-auto shadow-2xl"
+                        className="mx-auto"
+                        style={{ width: pageSize.w * scale, height: pageSize.h * scale }}
+                    >
+                    <div
+                        ref={pageRef}
+                        className="bg-white shadow-2xl"
                         style={{
-                            width: 794, // 21cm @96dpi
-                            minHeight: 1123, // 29,7cm
+                            width: A4_WIDTH,
+                            minHeight: A4_MIN_HEIGHT,
+                            transform: `scale(${scale})`,
+                            transformOrigin: 'top left',
                             padding: '87px 57px 76px 113px', // đúng lề 2,3 / 1,5 / 2,0 / 3,0 cm
                             fontFamily: '"Times New Roman", Times, serif',
                             fontSize: 16.5,
@@ -530,6 +589,7 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                         <p className="text-center italic" style={{ fontSize: 14.5 }}>
                             (Chức vụ, ký, đóng dấu, ghi rõ họ và tên)
                         </p>
+                    </div>
                     </div>
                 )}
             </div>

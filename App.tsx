@@ -81,6 +81,14 @@ import { PatientCardModule } from './components/PatientCardModule';
 import { CongVanModule } from './components/CongVanModule';
 import { RewardsModule } from './components/RewardsModule';
 import { AssignmentModule } from './components/AssignmentModule';
+import { useIsMobile } from './hooks/useIsMobile';
+import {
+  MobileHome,
+  MobileNavButton,
+  MobileHeaderTitle,
+  MobileBottomNav,
+  MOBILE_OVERVIEW_PATH
+} from './components/MobileHome';
 
 // Charts
 import {
@@ -590,6 +598,12 @@ const PlaceholderPage = ({ title }: { title: string }) => (
   </div>
 );
 
+// Trang chủ: desktop hiển thị tổng quan, mobile hiển thị lưới menu dạng icon
+const HomeRoute = ({ menuItems }: { menuItems: MenuItem[] }) => {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileHome menuItems={menuItems} /> : <OverviewModule />;
+};
+
 // Main App Layout & Logic
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -838,11 +852,12 @@ function App() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
           {/* Header */}
-          <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10">
+          <header className="relative h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-6 shrink-0 z-10">
             <div className="flex items-center gap-4">
+              <MobileNavButton menuItems={sortedMenuItems} onOpenSidebar={() => setSidebarOpen(true)} />
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-slate-100 rounded-lg text-slate-600"
+                className="hidden lg:block p-2 hover:bg-slate-100 rounded-lg text-slate-600"
               >
                 <Menu size={20} />
               </button>
@@ -855,7 +870,8 @@ function App() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <MobileHeaderTitle menuItems={sortedMenuItems} />
+            <div className="flex items-center gap-2 lg:gap-4">
               <button
                 onClick={() => setIsAssistantOpen(true)}
                 className="hidden md:flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-md transition-all hover:scale-105"
@@ -868,7 +884,7 @@ function App() {
                 <Bell size={20} />
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
               </button>
-              <div className="h-8 w-[1px] bg-slate-200"></div>
+              <div className="hidden md:block h-8 w-[1px] bg-slate-200"></div>
 
               {/* User Dropdown */}
               <div className="relative">
@@ -926,9 +942,11 @@ function App() {
           </header>
 
           {/* Scrollable Content Area */}
-          <main className="flex-1 overflow-y-auto bg-slate-50 scrollbar-hide">
+          <main className="flex-1 overflow-y-auto bg-slate-50 scrollbar-hide pb-16 lg:pb-0">
             <Routes>
-              <Route path="/" element={<OverviewModule />} />
+              <Route path="/" element={<HomeRoute menuItems={sortedMenuItems} />} />
+              <Route path="/m/:groupId" element={<MobileHome menuItems={sortedMenuItems} />} />
+              <Route path={MOBILE_OVERVIEW_PATH} element={<OverviewModule />} />
               <Route path="/personnel/dashboard" element={<Dashboard />} />
               <Route path="/personnel/list" element={<PersonnelList />} />
               <Route path="/personnel/salary" element={<SalaryModule />} />
@@ -955,6 +973,9 @@ function App() {
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
           </main>
+
+          {/* Thanh điều hướng dưới cùng (mobile) */}
+          <MobileBottomNav menuItems={sortedMenuItems} />
 
           {/* AI Assistant FAB */}
           <Assistant isOpen={isAssistantOpen} onClose={() => setIsAssistantOpen(false)} />
