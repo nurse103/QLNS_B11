@@ -492,15 +492,15 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê chức vụ</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={jobTitleData} margin={{ top: 10, right: 30, left: 0, bottom: 50 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={-25} textAnchor="end" height={60} />
-                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+              <BarChart layout="vertical" data={jobTitleData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={130} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f1f5f9' }}
                 />
-                <Bar dataKey="value" name="Số lượng" fill="#f59e0b" radius={[4, 4, 0, 0]} label={{ position: 'top' }} />
+                <Bar dataKey="value" name="Số lượng" fill="#f59e0b" radius={[0, 4, 4, 0]} label={{ position: 'right' }} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -516,15 +516,15 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê trình độ đào tạo</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={educationData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={0} textAnchor="middle" height={30} />
-                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+              <BarChart layout="vertical" data={educationData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={110} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f1f5f9' }}
                 />
-                <Bar dataKey="value" name="Số lượng" fill="#8b5cf6" radius={[4, 4, 0, 0]} label={{ position: 'top' }} />
+                <Bar dataKey="value" name="Số lượng" fill="#8b5cf6" radius={[0, 4, 4, 0]} label={{ position: 'right' }} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -535,15 +535,15 @@ const Dashboard = () => {
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê chứng chỉ hành nghề</h3>
           <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={certificateData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={0} textAnchor="middle" height={30} />
-                <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+              <BarChart layout="vertical" data={certificateData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={110} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f1f5f9' }}
                 />
-                <Bar dataKey="value" name="Số lượng" fill="#f43f5e" radius={[4, 4, 0, 0]} label={{ position: 'top' }} />
+                <Bar dataKey="value" name="Số lượng" fill="#f43f5e" radius={[0, 4, 4, 0]} label={{ position: 'right' }} />
               </BarChart>
             </ResponsiveContainer>
           </div>
