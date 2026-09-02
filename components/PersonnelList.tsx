@@ -313,6 +313,17 @@ export const PersonnelList = () => {
         }
     };
 
+    /** Nạp lại chi tiết sau khi sửa một bản ghi ở bảng con trong cửa sổ xem. */
+    const handleViewDataRefresh = async () => {
+        if (!viewData?.employee?.id) return;
+        try {
+            setViewData(await getEmployeeDetails(viewData.employee.id));
+        } catch (error) {
+            console.error("Failed to reload details after edit:", error);
+            alert("Đã lưu nhưng không tải lại được dữ liệu. Hãy mở lại cửa sổ chi tiết.");
+        }
+    };
+
     const handleEdit = async (emp: Employee) => {
         try {
             const details = await getEmployeeDetails(emp.id);
@@ -826,6 +837,7 @@ export const PersonnelList = () => {
                         training={viewData.training}
                         salary={viewData.salary}
                         onClose={() => setIsViewModalOpen(false)}
+                        onUpdated={handleViewDataRefresh}
                     />
                 )
             }

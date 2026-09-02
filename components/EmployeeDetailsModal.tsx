@@ -1,6 +1,77 @@
 import React, { useState } from 'react';
-import { Employee, Family, WorkHistory, Training, Salary } from '../services/personnelService';
-import { X, User, Users, Briefcase, GraduationCap, Activity, Calendar, Phone, MapPin, FileText, Shield, Award } from 'lucide-react';
+import { Employee, Family, WorkHistory, Training, Salary, sanitizeData } from '../services/personnelService';
+import { updateFamilyRecord } from '../services/familyService';
+import { updateWorkHistoryRecord } from '../services/workHistoryService';
+import { updateTrainingRecord } from '../services/trainingService';
+import { updateSalaryRecord } from '../services/salaryService';
+import { usePermissions } from '../hooks/usePermissions';
+import { X, User, Users, Briefcase, GraduationCap, Activity, Calendar, Phone, MapPin, FileText, Shield, Award, Edit, Save } from 'lucide-react';
+
+type ChildTab = 'family' | 'work' | 'training' | 'salary';
+
+type EditableField = {
+    name: string;
+    label: string;
+    type?: 'text' | 'date' | 'number' | 'textarea';
+};
+
+/** Các cột được phép sửa của từng bảng con, theo đúng tên cột trong CSDL. */
+const EDITABLE_FIELDS: Record<ChildTab, EditableField[]> = {
+    family: [
+        { name: 'moi_quan_he', label: 'Mối quan hệ' },
+        { name: 'ho_va_ten', label: 'Họ và tên' },
+        { name: 'nam_sinh', label: 'Năm sinh', type: 'number' },
+        { name: 'nghe_nghiep', label: 'Nghề nghiệp' },
+        { name: 'so_dien_thoai', label: 'Số điện thoại' },
+        { name: 'que_quan', label: 'Quê quán' },
+        { name: 'noi_o_hien_nay', label: 'Nơi ở hiện nay' },
+        { name: 'chuc_vu_don_vi', label: 'Chức vụ, đơn vị' },
+        { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea' },
+    ],
+    work: [
+        { name: 'tu_thang_nam', label: 'Từ ngày', type: 'date' },
+        { name: 'den_thang_nam', label: 'Đến ngày', type: 'date' },
+        { name: 'don_vi_cong_tac', label: 'Đơn vị công tác' },
+        { name: 'cap_bac', label: 'Cấp bậc' },
+        { name: 'chuc_vu', label: 'Chức vụ' },
+        { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea' },
+    ],
+    training: [
+        { name: 'tu_thang_nam', label: 'Từ ngày', type: 'date' },
+        { name: 'den_thang_nam', label: 'Đến ngày', type: 'date' },
+        { name: 'ten_co_so_dao_tao', label: 'Cơ sở đào tạo' },
+        { name: 'nganh_dao_tao', label: 'Ngành đào tạo' },
+        { name: 'trinh_do_dao_tao', label: 'Trình độ đào tạo' },
+        { name: 'hinh_thuc_dao_tao', label: 'Hình thức đào tạo' },
+        { name: 'xep_loai_tot_nghiep', label: 'Xếp loại tốt nghiệp' },
+        { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea' },
+    ],
+    salary: [
+        { name: 'thang_nam_nhan', label: 'Tháng năm nhận', type: 'date' },
+        { name: 'quan_ham', label: 'Quân hàm' },
+        { name: 'loai_nhom', label: 'Loại nhóm' },
+        { name: 'bac', label: 'Bậc' },
+        { name: 'he_so', label: 'Hệ số', type: 'number' },
+        { name: 'phan_tram_tnvk', label: '% thâm niên vượt khung', type: 'number' },
+        { name: 'hsbl', label: 'Hệ số bảo lưu', type: 'number' },
+        { name: 'hinh_thuc', label: 'Hình thức' },
+        { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea' },
+    ],
+};
+
+const UPDATERS: Record<ChildTab, (id: number, updates: any) => Promise<any>> = {
+    family: updateFamilyRecord,
+    work: updateWorkHistoryRecord,
+    training: updateTrainingRecord,
+    salary: updateSalaryRecord,
+};
+
+const EDIT_TITLES: Record<ChildTab, string> = {
+    family: 'Sửa thông tin người thân',
+    work: 'Sửa quá trình công tác',
+    training: 'Sửa quá trình đào tạo',
+    salary: 'Sửa diễn biến lương',
+};
 
 interface EmployeeDetailsModalProps {
     employee: Employee;
@@ -9,6 +80,8 @@ interface EmployeeDetailsModalProps {
     training: Training[];
     salary: Salary[];
     onClose: () => void;
+    /** Gọi sau khi sửa xong để nạp lại dữ liệu chi tiết của nhân viên. */
+    onUpdated?: () => void | Promise<void>;
 }
 
 export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
@@ -18,8 +91,59 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
     training,
     salary,
     onClose,
+    onUpdated,
 }) => {
-    const [activeTab, setActiveTab] = useState<'general' | 'family' | 'work' | 'training' | 'salary'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | ChildTab>('general');
+    const { can_edit } = usePermissions('p-list');
+
+    const [editing, setEditing] = useState<{ tab: ChildTab; id: number } | null>(null);
+    const [editForm, setEditForm] = useState<Record<string, any>>({});
+    const [saving, setSaving] = useState(false);
+
+    const startEdit = (tab: ChildTab, record: any) => {
+        if (!record?.id) return;
+        const initial: Record<string, any> = {};
+        EDITABLE_FIELDS[tab].forEach(f => { initial[f.name] = record[f.name] ?? ''; });
+        setEditForm(initial);
+        setEditing({ tab, id: record.id });
+    };
+
+    const handleSaveEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editing) return;
+
+        const updates: Record<string, any> = {};
+        EDITABLE_FIELDS[editing.tab].forEach(f => {
+            const raw = editForm[f.name];
+            if (f.type === 'number') updates[f.name] = raw === '' || raw === null ? null : Number(raw);
+            else updates[f.name] = raw;
+        });
+
+        setSaving(true);
+        try {
+            // sanitizeData đổi chuỗi rỗng thành null, tránh lỗi kiểu date của Postgres
+            await UPDATERS[editing.tab](editing.id, sanitizeData(updates));
+            setEditing(null);
+            await onUpdated?.();
+        } catch (error: any) {
+            console.error('Cập nhật bản ghi thất bại:', error);
+            alert(`Không lưu được thay đổi: ${error?.message ?? 'lỗi không xác định'}`);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const EditButton = ({ tab, record }: { tab: ChildTab; record: any }) =>
+        can_edit && record?.id ? (
+            <button
+                type="button"
+                onClick={() => startEdit(tab, record)}
+                title="Sửa bản ghi"
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+            >
+                <Edit size={14} />
+            </button>
+        ) : null;
 
     const formatDate = (dateStr: string | null | undefined) => {
         if (!dateStr) return '---';
@@ -156,6 +280,7 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                     <th className="px-4 py-3">Nơi ở hiện nay</th>
                                                     <th className="px-4 py-3">Chức vụ, đơn vị</th>
                                                     <th className="px-4 py-3">Ghi chú</th>
+                                                    {can_edit && <th className="px-4 py-3 w-12"></th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -169,6 +294,11 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                         <td className="px-4 py-3">{item.noi_o_hien_nay}</td>
                                                         <td className="px-4 py-3">{item.chuc_vu_don_vi}</td>
                                                         <td className="px-4 py-3 text-slate-500">{item.ghi_chu}</td>
+                                                        {can_edit && (
+                                                            <td className="px-4 py-3 text-right">
+                                                                <EditButton tab="family" record={item} />
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -194,11 +324,14 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                     {idx !== workHistory.length - 1 && <div className="w-0.5 flex-1 bg-slate-200 -my-1"></div>}
                                                 </div>
                                                 <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex-1 mb-2 hover:shadow-md transition-shadow">
-                                                    <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex justify-between items-start mb-2 gap-2">
                                                         <h4 className="font-bold text-slate-800 text-lg">{item.don_vi_cong_tac}</h4>
-                                                        <span className="text-sm font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                                                            {formatDate(item.tu_thang_nam)} - {formatDate(item.den_thang_nam)}
-                                                        </span>
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <span className="text-sm font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                                                                {formatDate(item.tu_thang_nam)} - {formatDate(item.den_thang_nam)}
+                                                            </span>
+                                                            <EditButton tab="work" record={item} />
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-4 text-sm text-slate-600">
                                                         <div><span className="font-medium text-slate-500">Cấp bậc:</span> {item.cap_bac || '---'}</div>
@@ -224,11 +357,14 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                     <div className="grid grid-cols-1 gap-4">
                                         {training.map((item, idx) => (
                                             <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all border-l-4 border-l-indigo-500">
-                                                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-2">
+                                                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-2 gap-2">
                                                     <h4 className="font-bold text-slate-800 text-lg">{item.ten_co_so_dao_tao}</h4>
-                                                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded mt-2 md:mt-0 w-fit">
-                                                        {formatDate(item.tu_thang_nam)} - {formatDate(item.den_thang_nam)}
-                                                    </span>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded w-fit">
+                                                            {formatDate(item.tu_thang_nam)} - {formatDate(item.den_thang_nam)}
+                                                        </span>
+                                                        <EditButton tab="training" record={item} />
+                                                    </div>
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4 text-sm text-slate-600 mt-2">
                                                     <div><span className="font-medium text-slate-500">Ngành:</span> {item.nganh_dao_tao}</div>
@@ -261,6 +397,7 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                     <th className="px-4 py-3">Bậc</th>
                                                     <th className="px-4 py-3">Hệ số</th>
                                                     <th className="px-4 py-3">Ghi chú</th>
+                                                    {can_edit && <th className="px-4 py-3 w-12"></th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -272,6 +409,11 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                                         <td className="px-4 py-3">{item.bac}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-800">{item.he_so}</td>
                                                         <td className="px-4 py-3 text-slate-500">{item.ghi_chu}</td>
+                                                        {can_edit && (
+                                                            <td className="px-4 py-3 text-right">
+                                                                <EditButton tab="salary" record={item} />
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -297,6 +439,70 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                     </button>
                 </div>
             </div>
+
+            {/* Cửa sổ sửa bản ghi của bảng con, xếp trên cửa sổ chi tiết */}
+            {editing && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                            <h3 className="font-bold text-lg text-slate-800">{EDIT_TITLES[editing.tab]}</h3>
+                            <button
+                                type="button"
+                                onClick={() => setEditing(null)}
+                                className="text-slate-400 hover:text-slate-600 p-1"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSaveEdit} className="flex-1 flex flex-col overflow-hidden">
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto">
+                                {EDITABLE_FIELDS[editing.tab].map(field => (
+                                    <div
+                                        key={field.name}
+                                        className={`space-y-1 ${field.type === 'textarea' ? 'md:col-span-2' : ''}`}
+                                    >
+                                        <label className="text-sm font-medium text-slate-700">{field.label}</label>
+                                        {field.type === 'textarea' ? (
+                                            <textarea
+                                                rows={3}
+                                                value={editForm[field.name] ?? ''}
+                                                onChange={e => setEditForm({ ...editForm, [field.name]: e.target.value })}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]"
+                                            />
+                                        ) : (
+                                            <input
+                                                type={field.type ?? 'text'}
+                                                step={field.type === 'number' ? 'any' : undefined}
+                                                value={editForm[field.name] ?? ''}
+                                                onChange={e => setEditForm({ ...editForm, [field.name]: e.target.value })}
+                                                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]"
+                                            />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditing(null)}
+                                    className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-100 transition-all"
+                                >
+                                    Huỷ
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="px-5 py-2.5 bg-[#009900] text-white font-semibold rounded-xl hover:bg-[#008000] transition-all flex items-center gap-2 disabled:opacity-60"
+                                >
+                                    <Save size={18} /> {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
