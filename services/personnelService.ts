@@ -8,6 +8,7 @@ export interface Employee {
     gioi_tinh: string | null;
     cap_bac: string | null;
     chuc_vu: string | null;
+    trinh_do: string | null;
     cccd: string | null;
     ngay_cap_cccd: string | null;
     cmqd: string | null;

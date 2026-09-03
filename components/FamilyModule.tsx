@@ -370,8 +370,11 @@ export const FamilyModule = () => {
                                         <option value="Vợ" />
                                         <option value="Chồng" />
                                         <option value="Con" />
+                                        <option value="Con ruột" />
                                         <option value="Bố đẻ" />
                                         <option value="Mẹ đẻ" />
+                                        <option value="Anh ruột" />
+                                        <option value="Chị ruột" />
                                         <option value="Bố chồng" />
                                         <option value="Mẹ chồng" />
                                         <option value="Bố vợ" />

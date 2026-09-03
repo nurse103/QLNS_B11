@@ -308,7 +308,12 @@ export const OverviewModule = () => {
     };
 
     // Calculate CCHN Stats
-    const personnelIdsWithCCHN = new Set(cchnRecords.map(r => r.dsnv_id));
+    // "Đã có" chỉ tính những người có bản ghi CCHN với số CCHN (so_cchn) khác rỗng.
+    const personnelIdsWithCCHN = new Set(
+        cchnRecords
+            .filter(r => r.so_cchn && r.so_cchn.trim() !== '')
+            .map(r => r.dsnv_id)
+    );
     const activeWithCCHN = activePersonnel.filter(p => personnelIdsWithCCHN.has(p.id!));
 
     stats.cchn.hasCCHN = activeWithCCHN.length;

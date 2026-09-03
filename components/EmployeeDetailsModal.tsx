@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Employee, Family, WorkHistory, Training, Salary, sanitizeData } from '../services/personnelService';
+import { getCatalog, CATALOG_KEYS } from '../services/catalogService';
 import { updateFamilyRecord } from '../services/familyService';
 import { updateWorkHistoryRecord } from '../services/workHistoryService';
 import { updateTrainingRecord } from '../services/trainingService';
@@ -13,12 +14,13 @@ type EditableField = {
     name: string;
     label: string;
     type?: 'text' | 'date' | 'number' | 'textarea';
+    list?: string; // id của datalist gợi ý (nếu có)
 };
 
 /** Các cột được phép sửa của từng bảng con, theo đúng tên cột trong CSDL. */
 const EDITABLE_FIELDS: Record<ChildTab, EditableField[]> = {
     family: [
-        { name: 'moi_quan_he', label: 'Mối quan hệ' },
+        { name: 'moi_quan_he', label: 'Mối quan hệ', list: 'relationship-options-detail' },
         { name: 'ho_va_ten', label: 'Họ và tên' },
         { name: 'nam_sinh', label: 'Năm sinh', type: 'number' },
         { name: 'nghe_nghiep', label: 'Nghề nghiệp' },
@@ -32,8 +34,8 @@ const EDITABLE_FIELDS: Record<ChildTab, EditableField[]> = {
         { name: 'tu_thang_nam', label: 'Từ ngày', type: 'date' },
         { name: 'den_thang_nam', label: 'Đến ngày', type: 'date' },
         { name: 'don_vi_cong_tac', label: 'Đơn vị công tác' },
-        { name: 'cap_bac', label: 'Cấp bậc' },
-        { name: 'chuc_vu', label: 'Chức vụ' },
+        { name: 'cap_bac', label: 'Cấp bậc', list: 'cap-bac-options-detail' },
+        { name: 'chuc_vu', label: 'Chức vụ', list: 'chuc-vu-options-detail' },
         { name: 'ghi_chu', label: 'Ghi chú', type: 'textarea' },
     ],
     training: [
@@ -99,6 +101,21 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
     const [editing, setEditing] = useState<{ tab: ChildTab; id: number } | null>(null);
     const [editForm, setEditForm] = useState<Record<string, any>>({});
     const [saving, setSaving] = useState(false);
+
+    // Danh mục gợi ý cho ô Cấp bậc / Chức vụ khi sửa quá trình công tác
+    const [capBacOptions, setCapBacOptions] = useState<string[]>([]);
+    const [chucVuOptions, setChucVuOptions] = useState<string[]>([]);
+    useEffect(() => {
+        const loadCatalogs = async () => {
+            const [capBac, chucVu] = await Promise.all([
+                getCatalog(CATALOG_KEYS.CAP_BAC),
+                getCatalog(CATALOG_KEYS.CHUC_VU),
+            ]);
+            setCapBacOptions(capBac);
+            setChucVuOptions(chucVu);
+        };
+        loadCatalogs();
+    }, []);
 
     const startEdit = (tab: ChildTab, record: any) => {
         if (!record?.id) return;
@@ -474,6 +491,7 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                             <input
                                                 type={field.type ?? 'text'}
                                                 step={field.type === 'number' ? 'any' : undefined}
+                                                list={field.list}
                                                 value={editForm[field.name] ?? ''}
                                                 onChange={e => setEditForm({ ...editForm, [field.name]: e.target.value })}
                                                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]"
@@ -482,6 +500,28 @@ export const EmployeeDetailsModal: React.FC<EmployeeDetailsModalProps> = ({
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Datalist gợi ý dùng chung cho các ô có cấu hình danh mục */}
+                            <datalist id="relationship-options-detail">
+                                <option value="Vợ" />
+                                <option value="Chồng" />
+                                <option value="Con" />
+                                <option value="Con ruột" />
+                                <option value="Bố đẻ" />
+                                <option value="Mẹ đẻ" />
+                                <option value="Anh ruột" />
+                                <option value="Chị ruột" />
+                                <option value="Bố chồng" />
+                                <option value="Mẹ chồng" />
+                                <option value="Bố vợ" />
+                                <option value="Mẹ vợ" />
+                            </datalist>
+                            <datalist id="cap-bac-options-detail">
+                                {capBacOptions.map(opt => <option key={opt} value={opt} />)}
+                            </datalist>
+                            <datalist id="chuc-vu-options-detail">
+                                {chucVuOptions.map(opt => <option key={opt} value={opt} />)}
+                            </datalist>
 
                             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
                                 <button

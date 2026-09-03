@@ -41,6 +41,13 @@ import {
     Training,
     Salary
 } from '../services/personnelService';
+import { getCatalog, CATALOG_KEYS } from '../services/catalogService';
+
+// Gợi ý trình độ (học vấn/chuyên môn) dùng cho ô nhập và cập nhật hàng loạt
+const TRINH_DO_OPTIONS = [
+    'Tiến sĩ', 'Thạc sĩ', 'Chuyên khoa II', 'Chuyên khoa I',
+    'Đại học', 'Cao đẳng', 'Trung cấp', 'Sơ cấp',
+];
 
 // Helper function
 const formatDateVN = (dateStr: string | undefined | null) => {
@@ -78,6 +85,9 @@ export const PersonnelList = () => {
     const [bulkStatus, setBulkStatus] = useState<string>('');
     const [bulkObject, setBulkObject] = useState<string>('');
     const [bulkManagementArea, setBulkManagementArea] = useState<string>('');
+    const [bulkCapBac, setBulkCapBac] = useState<string>('');
+    const [bulkChucVu, setBulkChucVu] = useState<string>('');
+    const [bulkTrinhDo, setBulkTrinhDo] = useState<string>('');
 
     // Form State
     const [formData, setFormData] = useState<Partial<Employee>>({});
@@ -89,6 +99,10 @@ export const PersonnelList = () => {
     const [workHistoryList, setWorkHistoryList] = useState<WorkHistory[]>([]);
     const [trainingList, setTrainingList] = useState<Training[]>([]);
     const [salaryList, setSalaryList] = useState<Salary[]>([]);
+
+    // Danh mục cấu hình (Cấp bậc / Chức vụ) dùng cho gợi ý chọn nhanh trong form
+    const [capBacOptions, setCapBacOptions] = useState<string[]>([]);
+    const [chucVuOptions, setChucVuOptions] = useState<string[]>([]);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -169,6 +183,19 @@ export const PersonnelList = () => {
 
     useEffect(() => {
         fetchData();
+    }, []);
+
+    // Tải danh mục Cấp bậc / Chức vụ cho gợi ý trong form
+    useEffect(() => {
+        const loadCatalogs = async () => {
+            const [capBac, chucVu] = await Promise.all([
+                getCatalog(CATALOG_KEYS.CAP_BAC),
+                getCatalog(CATALOG_KEYS.CHUC_VU),
+            ]);
+            setCapBacOptions(capBac);
+            setChucVuOptions(chucVu);
+        };
+        loadCatalogs();
     }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -275,7 +302,7 @@ export const PersonnelList = () => {
 
     const handleBulkUpdate = async () => {
         if (selectedIds.size === 0) return;
-        if (!bulkStatus && !bulkObject && !bulkManagementArea) {
+        if (!bulkStatus && !bulkObject && !bulkManagementArea && !bulkCapBac.trim() && !bulkChucVu.trim() && !bulkTrinhDo.trim()) {
             alert("Vui lòng chọn ít nhất một thông tin cần cập nhật.");
             return;
         }
@@ -285,6 +312,9 @@ export const PersonnelList = () => {
             if (bulkStatus) updates.trang_thai = bulkStatus;
             if (bulkObject) updates.doi_tuong = bulkObject;
             if (bulkManagementArea) updates.dien_quan_ly = bulkManagementArea;
+            if (bulkCapBac.trim()) updates.cap_bac = bulkCapBac.trim();
+            if (bulkChucVu.trim()) updates.chuc_vu = bulkChucVu.trim();
+            if (bulkTrinhDo.trim()) updates.trinh_do = bulkTrinhDo.trim();
 
             await bulkUpdatePersonnel(Array.from(selectedIds), updates);
             alert(`Đã cập nhật cho ${selectedIds.size} nhân viên!`);
@@ -293,6 +323,9 @@ export const PersonnelList = () => {
             setBulkStatus('');
             setBulkObject('');
             setBulkManagementArea('');
+            setBulkCapBac('');
+            setBulkChucVu('');
+            setBulkTrinhDo('');
             fetchData();
         } catch (error) {
             console.error("Bulk update failed:", error);
@@ -420,6 +453,7 @@ export const PersonnelList = () => {
                 gioi_tinh: row[2],
                 cap_bac: row[3],
                 chuc_vu: row[4],
+                trinh_do: null,
                 cccd: row[5] ? String(row[5]) : null,
                 ngay_cap_cccd: processDate(row[6]),
                 cmqd: row[7] ? String(row[7]) : null,
@@ -954,11 +988,24 @@ export const PersonnelList = () => {
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-slate-700">Cấp bậc</label>
-                                                        <input type="text" name="cap_bac" value={formData.cap_bac || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                                                        <input type="text" name="cap_bac" list="cap-bac-options" value={formData.cap_bac || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Chọn hoặc nhập cấp bậc..." />
+                                                        <datalist id="cap-bac-options">
+                                                            {capBacOptions.map(opt => <option key={opt} value={opt} />)}
+                                                        </datalist>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-slate-700">Chức danh/Chức vụ</label>
-                                                        <input type="text" name="chuc_vu" value={formData.chuc_vu || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                                                        <input type="text" name="chuc_vu" list="chuc-vu-options" value={formData.chuc_vu || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Chọn hoặc nhập chức danh/chức vụ..." />
+                                                        <datalist id="chuc-vu-options">
+                                                            {chucVuOptions.map(opt => <option key={opt} value={opt} />)}
+                                                        </datalist>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <label className="text-sm font-medium text-slate-700">Trình độ</label>
+                                                        <input type="text" name="trinh_do" list="trinh-do-options" value={formData.trinh_do || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Chọn hoặc nhập trình độ..." />
+                                                        <datalist id="trinh-do-options">
+                                                            {TRINH_DO_OPTIONS.map(opt => <option key={opt} value={opt} />)}
+                                                        </datalist>
                                                     </div>
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-slate-700">Đối tượng</label>
@@ -1142,8 +1189,11 @@ export const PersonnelList = () => {
                                                         <option value="Vợ" />
                                                         <option value="Chồng" />
                                                         <option value="Con" />
+                                                        <option value="Con ruột" />
                                                         <option value="Bố đẻ" />
                                                         <option value="Mẹ đẻ" />
+                                                        <option value="Anh ruột" />
+                                                        <option value="Chị ruột" />
                                                         <option value="Bố chồng" />
                                                         <option value="Mẹ chồng" />
                                                         <option value="Bố vợ" />
@@ -1231,11 +1281,11 @@ export const PersonnelList = () => {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Cấp bậc</label>
-                                                    <input type="text" value={tempWork.cap_bac || ''} onChange={e => setTempWork({ ...tempWork, cap_bac: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                                                    <input type="text" list="cap-bac-options" value={tempWork.cap_bac || ''} onChange={e => setTempWork({ ...tempWork, cap_bac: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Chức vụ</label>
-                                                    <input type="text" value={tempWork.chuc_vu || ''} onChange={e => setTempWork({ ...tempWork, chuc_vu: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+                                                    <input type="text" list="chuc-vu-options" value={tempWork.chuc_vu || ''} onChange={e => setTempWork({ ...tempWork, chuc_vu: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
                                                 <div className="col-span-1 md:col-span-2">
                                                     <button
@@ -1440,6 +1490,51 @@ export const PersonnelList = () => {
                                     <option value="CN & VCQP">CN & VCQP</option>
                                     <option value="LĐHĐ">LĐHĐ</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Cấp bậc mới (để trống nếu không đổi)</label>
+                                <input
+                                    type="text"
+                                    list="cap-bac-options-bulk"
+                                    value={bulkCapBac}
+                                    onChange={(e) => setBulkCapBac(e.target.value)}
+                                    placeholder="Chọn hoặc nhập cấp bậc..."
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                />
+                                <datalist id="cap-bac-options-bulk">
+                                    {capBacOptions.map(opt => <option key={opt} value={opt} />)}
+                                </datalist>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Chức danh/Chức vụ mới (để trống nếu không đổi)</label>
+                                <input
+                                    type="text"
+                                    list="chuc-vu-options-bulk"
+                                    value={bulkChucVu}
+                                    onChange={(e) => setBulkChucVu(e.target.value)}
+                                    placeholder="Chọn hoặc nhập chức danh/chức vụ..."
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                />
+                                <datalist id="chuc-vu-options-bulk">
+                                    {chucVuOptions.map(opt => <option key={opt} value={opt} />)}
+                                </datalist>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Trình độ mới (để trống nếu không đổi)</label>
+                                <input
+                                    type="text"
+                                    list="trinh-do-options-bulk"
+                                    value={bulkTrinhDo}
+                                    onChange={(e) => setBulkTrinhDo(e.target.value)}
+                                    placeholder="Chọn hoặc nhập trình độ..."
+                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                />
+                                <datalist id="trinh-do-options-bulk">
+                                    {TRINH_DO_OPTIONS.map(opt => <option key={opt} value={opt} />)}
+                                </datalist>
                             </div>
                             <div className="flex gap-3 justify-end mt-6">
                                 <button

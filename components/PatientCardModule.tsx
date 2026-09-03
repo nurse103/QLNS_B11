@@ -719,6 +719,11 @@ export const PatientCardModule = () => {
                                                         {record.trang_thai === 'Ra chưa trả thẻ' ? 'Ngày ra: ' : 'Trả: '} {formatDate(record.ngay_tra)}
                                                     </div>
                                                 )}
+                                                {(record.trang_thai === 'Đã trả thẻ' || record.trang_thai === 'Trả thẻ chưa trả tiền') && record.nguoi_nhan_lai_the && (
+                                                    <div className="text-[10px] text-slate-500 mt-0.5">
+                                                        Người nhận thẻ: {record.nguoi_nhan_lai_the}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3">
                                                 {record.trang_thai === 'Đã trả thẻ' ? (

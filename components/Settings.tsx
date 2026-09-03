@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { getBackground, updateBackground } from '../services/authService';
-import { Upload, Image as ImageIcon, Save, CheckCircle, AlertCircle, Users, Layout, Shield, ListTree, ChevronUp, ChevronDown } from 'lucide-react';
+import { Upload, Image as ImageIcon, Save, CheckCircle, AlertCircle, Users, Layout, Shield, ListTree, ChevronUp, ChevronDown, Tag } from 'lucide-react';
 import { UserManagement } from './UserManagement';
 import { CardManagement } from './CardManagement';
 import { PermissionSettings } from './PermissionSettings';
+import { CatalogSettings } from './CatalogSettings';
 import { getMenuOrder, updateMenuOrder } from '../services/settingsService';
 import { getAuthUser } from '../services/authService';
 import { CreditCard } from 'lucide-react';
 
 export const Settings = () => {
-    const [activeTab, setActiveTab] = useState<'general' | 'users' | 'cards' | 'permissions' | 'menu'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'users' | 'cards' | 'permissions' | 'menu' | 'catalog'>('general');
     const [background, setBackground] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [userRole, setUserRole] = useState<string>('');
@@ -178,6 +179,15 @@ export const Settings = () => {
                                     Sắp xếp menu
                                 </button>
                             )}
+                            {userRole === 'admin' && (
+                                <button
+                                    onClick={() => setActiveTab('catalog')}
+                                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'catalog' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                                >
+                                    <Tag size={18} />
+                                    Cấu hình danh mục
+                                </button>
+                            )}
                         </nav>
                     </div>
                 </div>
@@ -316,6 +326,10 @@ export const Settings = () => {
                                     {!loading && <Save size={20} />}
                                 </button>
                             </div>
+                        </div>
+                    ) : activeTab === 'catalog' && userRole === 'admin' ? (
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 min-h-[500px]">
+                            <CatalogSettings />
                         </div>
                     ) : null}
                 </div>

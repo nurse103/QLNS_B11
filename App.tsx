@@ -68,7 +68,8 @@ const formatDateVN = (dateStr: string | undefined | null) => {
   return `${day}/${month}/${year}`;
 };
 
-import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, getAllTraining, uploadPartyCardImage, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
+import { getPersonnel, createPersonnel, updatePersonnel, bulkCreatePersonnel, bulkUpdatePersonnel, deletePersonnel, getEmployeeDetails, uploadPartyCardImage, Employee, Family, WorkHistory, Training, Salary } from './services/personnelService';
+import { getCCHNRecords } from './services/cchnService';
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './components/EmployeeDetailsModal';
 import { UserProfileModal } from './components/UserProfileModal';
@@ -247,9 +248,9 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [data, trainingData] = await Promise.all([
+        const [data, cchnData] = await Promise.all([
           getPersonnel(),
-          getAllTraining()
+          getCCHNRecords()
         ]);
 
         // FILTER FOR ACTIVE EMPLOYEES and sort (optional)
@@ -304,12 +305,10 @@ const Dashboard = () => {
         ]);
 
         // 4. Calculate Education Bar Chart Data
-        const activeIds = new Set(activeData.map(e => e.id));
-        const relevantTraining = trainingData.filter(t => t.dsnv_id && activeIds.has(t.dsnv_id) && t.trinh_do_dao_tao);
-
+        // Thống kê theo cột Trình độ (trinh_do) trên hồ sơ nhân viên đang công tác.
         const eduCount: Record<string, number> = {};
-        relevantTraining.forEach(t => {
-          const level = t.trinh_do_dao_tao?.trim() || 'Chưa rõ';
+        activeData.forEach(e => {
+          const level = e.trinh_do?.trim() || 'Chưa rõ';
           eduCount[level] = (eduCount[level] || 0) + 1;
         });
 
@@ -349,25 +348,18 @@ const Dashboard = () => {
         setBirthdayData(birthdays);
 
         // 7. Calculate Professional Certificate Data (Chung Chi Hanh Nghe)
-        const certCount: Record<string, number> = {};
-        activeData.forEach(e => {
-          if (e.chung_chi_hanh_nghe) {
-            // Determine if it's a comma separated list or single value? 
-            // Assuming simple text for now based on requirement "Biểu đồ chứng chỉ hành nghề"
-            // Split by comma if needed, trimming whitespace
-            const certs = e.chung_chi_hanh_nghe.split(',').map(c => c.trim()).filter(c => c);
-            certs.forEach(c => {
-              certCount[c] = (certCount[c] || 0) + 1;
-            });
-          } else {
-            certCount['Chưa có'] = (certCount['Chưa có'] || 0) + 1;
-          }
-        });
-
-        const sortedCerts = Object.entries(certCount)
-          .map(([name, value]) => ({ name, value }))
-          .sort((a, b) => b.value - a.value);
-        setCertificateData(sortedCerts);
+        // "Đã có" = có bản ghi trong bảng CCHN với số CCHN (so_cchn) khác rỗng; ngược lại "Chưa có".
+        const idsWithCCHN = new Set(
+          (cchnData || [])
+            .filter(r => r.so_cchn && r.so_cchn.trim() !== '')
+            .map(r => r.dsnv_id)
+        );
+        const hasCCHN = activeData.filter(e => idsWithCCHN.has(e.id!)).length;
+        const noCCHN = activeData.length - hasCCHN;
+        setCertificateData([
+          { name: 'Đã có', value: hasCCHN },
+          { name: 'Chưa có', value: noCCHN },
+        ]);
 
         // Removed Fluctuation Chart Loop
 
@@ -495,7 +487,7 @@ const Dashboard = () => {
               <BarChart layout="vertical" data={jobTitleData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                 <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={130} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={150} tick={{ fontSize: 12 }} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f1f5f9' }}
@@ -519,7 +511,7 @@ const Dashboard = () => {
               <BarChart layout="vertical" data={educationData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                 <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={110} />
+                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={150} tick={{ fontSize: 12 }} />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f1f5f9' }}
@@ -533,18 +525,23 @@ const Dashboard = () => {
         {/* Certificate Chart Section (NEW) */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
           <h3 className="text-lg font-semibold text-slate-800 mb-6">Thống kê chứng chỉ hành nghề</h3>
-          <div className="h-80 w-full">
+          <div className="h-80 w-full flex justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={certificateData} margin={{ top: 10, right: 40, left: 0, bottom: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} interval={0} width={110} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  cursor={{ fill: '#f1f5f9' }}
-                />
-                <Bar dataKey="value" name="Số lượng" fill="#f43f5e" radius={[0, 4, 4, 0]} label={{ position: 'right' }} />
-              </BarChart>
+              <PieChart>
+                <Pie
+                  data={certificateData}
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                  label={({ name, percent, value }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                >
+                  <Cell fill="#16a34a" /> {/* Đã có - Green */}
+                  <Cell fill="#f43f5e" /> {/* Chưa có - Red */}
+                </Pie>
+                <Tooltip formatter={(value, name) => [value, name]} />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
