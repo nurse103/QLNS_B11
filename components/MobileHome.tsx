@@ -26,6 +26,22 @@ const TILE_STYLES = [
   { bg: 'bg-gradient-to-br from-slate-100 via-slate-200 to-slate-400', icon: 'text-slate-700', label: 'text-slate-700', shadow: 'shadow-slate-300/70' },
 ];
 
+// Nhãn rút gọn hiển thị trên lưới trang chủ mobile (theo id menu).
+// Không đổi nhãn đầy đủ dùng ở sidebar/tiêu đề.
+const MOBILE_SHORT_LABELS: Record<string, string> = {
+  'patient-card-management': 'Thẻ chăm',
+  'party-management': 'Đảng viên',
+  'absence': 'QS nghỉ',
+  'leave': 'Phép - TT',
+  'rewards': 'KT - KL',
+  'research': 'NCKH',
+  'combat': 'Tổ đội',
+  'assets': 'QL Tài sản',
+  'reports': 'Báo cáo',
+  'assignments': 'Phân công CV',
+  'cong-van': 'Công văn',
+};
+
 // Đường dẫn thực tế khi bấm vào một ô trong lưới
 const targetPath = (item: MenuItem) => {
   if (item.subItems && item.subItems.length > 0) return `/m/${item.id}`;
@@ -112,7 +128,7 @@ export const MobileHome = ({ menuItems }: { menuItems: MenuItem[] }) => {
                 <Icon size={28} strokeWidth={2} className={`${style.icon} drop-shadow-sm`} />
               </div>
               <span className={`text-[11px] font-semibold uppercase leading-tight text-center ${style.label}`}>
-                {item.label}
+                {MOBILE_SHORT_LABELS[item.id] || item.label}
               </span>
             </button>
           );
