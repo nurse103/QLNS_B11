@@ -129,6 +129,16 @@ export const PARTY_ORG_DEFAULTS = {
 /** Danh sách mốc Huy hiệu Đảng in trên phiếu (mục 24). */
 export const HUY_HIEU_DANG_MOC = ['30', '40', '45', '50', '55', '60', '65', '70', '75', '80', '85', '90'];
 
+/** Gợi ý chức vụ đảng dùng chung cho form lý lịch đảng và quá trình công tác. */
+export const CHUC_VU_DANG_GOI_Y = [
+    'Bí thư chi bộ',
+    'Phó BTCB',
+    'Chi uỷ viên',
+    'Đảng viên',
+    'ĐUV, BTCB',
+    'Phó BTĐU, Phó BTCB',
+] as const;
+
 /** Toàn bộ dữ liệu cần để dựng một phiếu đảng viên. */
 export interface PartyDossier {
     employee: Employee;

@@ -123,6 +123,7 @@ export interface WorkHistory {
     don_vi_cong_tac?: string;
     cap_bac?: string;
     chuc_vu?: string;
+    chuc_vu_dang?: string;
     ghi_chu?: string;
     created_by?: string | null;
 }

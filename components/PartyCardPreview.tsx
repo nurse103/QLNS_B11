@@ -431,7 +431,13 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                                         <Td>
                                             {w
                                                 ? [
-                                                      val(p.chuc_vu_dang) || (e.ngay_vao_dang || e.so_the_dang ? 'Đảng viên' : ''),
+                                                      // Ưu tiên chức vụ đảng kê khai theo giai đoạn; nếu trống thì tự suy
+                                                      // ra cho giai đoạn kết thúc từ ngày vào Đảng trở đi.
+                                                      val(w.chuc_vu_dang) ||
+                                                          ((e.ngay_vao_dang || e.so_the_dang) &&
+                                                          !(e.ngay_vao_dang && val(w.den_thang_nam) && val(w.den_thang_nam) < val(e.ngay_vao_dang))
+                                                              ? val(p.chuc_vu_dang) || 'Đảng viên'
+                                                              : ''),
                                                       w.chuc_vu,
                                                       w.don_vi_cong_tac,
                                                   ]

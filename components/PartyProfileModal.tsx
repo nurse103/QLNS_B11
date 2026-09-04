@@ -82,6 +82,18 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
     /** Chỉ chính chủ (khớp họ tên đăng nhập) hoặc admin mới sửa được thông tin cá nhân. */
     const canEditPersonal = canEditPersonnelRecord(employee, authUser);
 
+    /** Chức vụ đảng mới nhất lấy từ Quá trình công tác: đợt có ngày bắt đầu muộn
+     *  nhất mà còn kê khai chức vụ đảng. Form chỉ hiển thị, không cho sửa tay. */
+    const latestPartyRole = useMemo(() => {
+        const list = dossier?.workHistory ?? [];
+        return (
+            [...list]
+                .sort((a, b) => (b.tu_thang_nam ?? '').localeCompare(a.tu_thang_nam ?? ''))
+                .find(w => (w.chuc_vu_dang ?? '').trim())
+                ?.chuc_vu_dang?.trim() ?? ''
+        );
+    }, [dossier]);
+
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -156,9 +168,11 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
                 setDossier(prev => (prev ? { ...prev, employee: updated } : prev));
             }
 
-            // 2. Ghi phần riêng của phiếu đảng viên
+            // 2. Ghi phần riêng của phiếu đảng viên.
+            //    Chức vụ đảng ở hồ sơ luôn đồng bộ theo giá trị mới nhất trong
+            //    Quá trình công tác (không cho sửa tay trên phiếu).
             if (canEdit) {
-                const saved = await savePartyProfile(form);
+                const saved = await savePartyProfile({ ...form, chuc_vu_dang: latestPartyRole || null });
                 setForm({ ...saved, huy_hieu_dang: saved.huy_hieu_dang ?? [] });
                 setDossier(prev => (prev ? { ...prev, profile: saved } : prev));
             }
@@ -386,23 +400,14 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
                                     <Field label="10) Thành phần gia đình">
                                         <input className={inputClass} disabled={readOnly} value={form.thanh_phan_gia_dinh ?? ''} onChange={set('thanh_phan_gia_dinh')} />
                                     </Field>
-                                    <Field label="Chức vụ đảng" hint="Dùng cho đầu cột quá trình công tác. Bỏ trống sẽ lấy “Đảng viên”.">
+                                    <Field label="Chức vụ đảng" fromDsnv hint="Tự lấy chức vụ đảng mới nhất trong Quá trình công tác. Sửa tại module Quá trình công tác.">
                                         <input
-                                            list="goi-y-chuc-vu-dang"
-                                            className={inputClass}
-                                            disabled={readOnly}
-                                            value={form.chuc_vu_dang ?? ''}
-                                            onChange={set('chuc_vu_dang')}
-                                            placeholder="Đảng viên"
+                                            className={dsnvInputClass}
+                                            disabled
+                                            readOnly
+                                            value={latestPartyRole}
+                                            placeholder="(chưa kê khai ở Quá trình công tác)"
                                         />
-                                        <datalist id="goi-y-chuc-vu-dang">
-                                            <option value="Bí thư chi bộ" />
-                                            <option value="Phó BTCB" />
-                                            <option value="Chi uỷ viên" />
-                                            <option value="Đảng viên" />
-                                            <option value="ĐUV, BTCB" />
-                                            <option value="Phó BTĐU, Phó BTCB" />
-                                        </datalist>
                                     </Field>
                                     <Field label="11) Nghề nghiệp hiện nay" className="md:col-span-2" hint="Bỏ trống sẽ lấy chức vụ trong hồ sơ nhân sự.">
                                         <input className={inputClass} disabled={readOnly} value={form.nghe_nghiep_hien_nay ?? ''} onChange={set('nghe_nghiep_hien_nay')} />

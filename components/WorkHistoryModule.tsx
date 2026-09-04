@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getWorkHistoryRecords, createWorkHistoryRecord, updateWorkHistoryRecord, deleteWorkHistoryRecord, WorkHistoryRecord } from '../services/workHistoryService';
 import { getPersonnel, Employee } from '../services/personnelService';
+import { CHUC_VU_DANG_GOI_Y } from '../services/partyService';
 import { Search, Plus, Briefcase, ChevronRight, X, Save, Edit, Trash2, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -115,6 +116,7 @@ export const WorkHistoryModule = () => {
             'Đơn vị công tác': item.don_vi_cong_tac,
             'Cấp bậc': item.cap_bac,
             'Chức vụ': item.chuc_vu,
+            'Chức vụ đảng': item.chuc_vu_dang,
             'Ghi chú': item.ghi_chu
         }));
 
@@ -268,6 +270,7 @@ export const WorkHistoryModule = () => {
                                                                         <th className="px-4 py-3">Đơn vị công tác</th>
                                                                         <th className="px-4 py-3">Cấp bậc</th>
                                                                         <th className="px-4 py-3">Chức danh/Chức vụ</th>
+                                                                        <th className="px-4 py-3">Chức vụ đảng</th>
                                                                         <th className="px-4 py-3 text-center">Thao tác</th>
                                                                     </tr>
                                                                 </thead>
@@ -282,6 +285,7 @@ export const WorkHistoryModule = () => {
                                                                             <td className="px-4 py-3 font-bold text-slate-800">{r.don_vi_cong_tac}</td>
                                                                             <td className="px-4 py-3 text-slate-700 font-medium">{r.cap_bac}</td>
                                                                             <td className="px-4 py-3 text-slate-600">{r.chuc_vu}</td>
+                                                                            <td className="px-4 py-3 text-slate-600">{r.chuc_vu_dang}</td>
                                                                             <td className="px-4 py-3 text-center">
                                                                                 <div className="flex items-center justify-center gap-1">
                                                                                     <button onClick={() => handleEdit(r)} className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors">
@@ -333,6 +337,10 @@ export const WorkHistoryModule = () => {
                             <div className="flex items-center justify-between py-2 border-b border-slate-50">
                                 <span className="text-sm text-slate-500">Chức danh/Chức vụ:</span>
                                 <span className="font-medium text-slate-700">{viewData.chuc_vu}</span>
+                            </div>
+                            <div className="flex items-center justify-between py-2 border-b border-slate-50">
+                                <span className="text-sm text-slate-500">Chức vụ đảng:</span>
+                                <span className="font-medium text-slate-700">{viewData.chuc_vu_dang || '—'}</span>
                             </div>
                             <div className="py-2">
                                 <span className="text-sm text-slate-500 block mb-1">Ghi chú:</span>
@@ -401,6 +409,20 @@ export const WorkHistoryModule = () => {
                                 <div className="space-y-1">
                                     <label className="text-sm font-medium text-slate-700">Chức danh/Chức vụ</label>
                                     <input type="text" value={formData.chuc_vu || ''} onChange={e => setFormData({ ...formData, chuc_vu: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]" />
+                                </div>
+                                <div className="col-span-2 space-y-1">
+                                    <label className="text-sm font-medium text-slate-700">Chức vụ đảng</label>
+                                    <input
+                                        type="text"
+                                        list="goi-y-chuc-vu-dang-qttc"
+                                        value={formData.chuc_vu_dang || ''}
+                                        onChange={e => setFormData({ ...formData, chuc_vu_dang: e.target.value })}
+                                        placeholder="Bỏ trống: tự lấy “Đảng viên” cho giai đoạn đã vào Đảng"
+                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#009900]"
+                                    />
+                                    <datalist id="goi-y-chuc-vu-dang-qttc">
+                                        {CHUC_VU_DANG_GOI_Y.map(v => <option key={v} value={v} />)}
+                                    </datalist>
                                 </div>
                                 <div className="col-span-2 space-y-1">
                                     <label className="text-sm font-medium text-slate-700">Ghi chú</label>

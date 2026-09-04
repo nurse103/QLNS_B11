@@ -459,9 +459,25 @@ const buildWorkHistory = (d: PartyDossier) => {
 
     const items = d.workHistory;
     // Phần "Làm gì" ở đầu cột lấy theo chức vụ đảng đã kê khai; nếu bỏ trống mà
-    // là đảng viên (có ngày vào Đảng hoặc số thẻ đảng) thì mặc định "Đảng viên".
+    // là đảng viên thì mặc định "Đảng viên".
+    const joinDate = val(d.employee.ngay_vao_dang);
     const isPartyMember = !!(d.employee.ngay_vao_dang || d.employee.so_the_dang);
-    const partyRole = val(d.profile.chuc_vu_dang) || (isPartyMember ? 'Đảng viên' : '');
+    const declaredPartyRole = val(d.profile.chuc_vu_dang) || 'Đảng viên';
+    // Chức vụ đảng chỉ xuất ở giai đoạn khớp với thời điểm đã vào Đảng: dòng nào
+    // kết thúc trước ngày vào Đảng (chưa là đảng viên) thì bỏ qua. Nếu chỉ có số
+    // thẻ đảng mà không có ngày vào Đảng thì không lọc theo mốc thời gian.
+    const partyRoleFor = (item: PartyDossier['workHistory'][number]): string => {
+        // Ưu tiên chức vụ đảng đã kê khai riêng cho giai đoạn công tác này.
+        const perPeriod = val(item.chuc_vu_dang);
+        if (perPeriod) return perPeriod;
+        // Nếu chưa kê khai: tự suy ra cho giai đoạn đã là đảng viên.
+        if (!isPartyMember) return '';
+        if (joinDate) {
+            const end = val(item.den_thang_nam);
+            if (end && end < joinDate) return '';
+        }
+        return declaredPartyRole;
+    };
     // Chỉ in đúng số dòng có dữ liệu, không chèn thêm dòng trống.
     // Giữ tối thiểu 1 dòng để bảng không trơ mỗi hàng tiêu đề khi chưa có dữ liệu.
     const total = Math.max(items.length, 1);
@@ -474,7 +490,7 @@ const buildWorkHistory = (d: PartyDossier) => {
         // phẩy để không lẫn với dấu phẩy vốn có trong tên đơn vị công tác.
         // VD: "Bí thư chi bộ; Điều dưỡng viên; Khoa Hồi sức ngoại, Bệnh viện Quân y 103"
         const detail = item
-            ? [partyRole, item.chuc_vu, item.don_vi_cong_tac].filter(Boolean).join('; ')
+            ? [partyRoleFor(item), item.chuc_vu, item.don_vi_cong_tac].filter(Boolean).join('; ')
             : '';
         rows.push(
             row([
