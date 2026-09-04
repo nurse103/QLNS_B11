@@ -431,12 +431,12 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                                         <Td>
                                             {w
                                                 ? [
-                                                      [w.chuc_vu, w.cap_bac ? `(${w.cap_bac})` : ''].filter(Boolean).join(' '),
+                                                      val(p.chuc_vu_dang) || (e.ngay_vao_dang || e.so_the_dang ? 'Đảng viên' : ''),
+                                                      w.chuc_vu,
                                                       w.don_vi_cong_tac,
-                                                      w.ghi_chu,
                                                   ]
                                                       .filter(Boolean)
-                                                      .join(', ')
+                                                      .join('; ')
                                                 : <>&nbsp;</>}
                                         </Td>
                                     </tr>

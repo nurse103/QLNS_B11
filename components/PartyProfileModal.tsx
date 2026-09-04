@@ -386,8 +386,23 @@ export const PartyProfileModal: React.FC<PartyProfileModalProps> = ({ employee, 
                                     <Field label="10) Thành phần gia đình">
                                         <input className={inputClass} disabled={readOnly} value={form.thanh_phan_gia_dinh ?? ''} onChange={set('thanh_phan_gia_dinh')} />
                                     </Field>
-                                    <Field label="Chức vụ (hồ sơ nhân sự)" fromDsnv>
-                                        <input className={dsnvInputClass} disabled={personalReadOnly} value={emp.chuc_vu ?? ''} onChange={setDsnv('chuc_vu')} />
+                                    <Field label="Chức vụ đảng" hint="Dùng cho đầu cột quá trình công tác. Bỏ trống sẽ lấy “Đảng viên”.">
+                                        <input
+                                            list="goi-y-chuc-vu-dang"
+                                            className={inputClass}
+                                            disabled={readOnly}
+                                            value={form.chuc_vu_dang ?? ''}
+                                            onChange={set('chuc_vu_dang')}
+                                            placeholder="Đảng viên"
+                                        />
+                                        <datalist id="goi-y-chuc-vu-dang">
+                                            <option value="Bí thư chi bộ" />
+                                            <option value="Phó BTCB" />
+                                            <option value="Chi uỷ viên" />
+                                            <option value="Đảng viên" />
+                                            <option value="ĐUV, BTCB" />
+                                            <option value="Phó BTĐU, Phó BTCB" />
+                                        </datalist>
                                     </Field>
                                     <Field label="11) Nghề nghiệp hiện nay" className="md:col-span-2" hint="Bỏ trống sẽ lấy chức vụ trong hồ sơ nhân sự.">
                                         <input className={inputClass} disabled={readOnly} value={form.nghe_nghiep_hien_nay ?? ''} onChange={set('nghe_nghiep_hien_nay')} />

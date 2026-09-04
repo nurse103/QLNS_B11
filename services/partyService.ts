@@ -28,6 +28,10 @@ export interface PartyProfile {
     thanh_phan_gia_dinh?: string | null;
     nghe_nghiep_hien_nay?: string | null;
 
+    // Chức vụ đảng (Bí thư chi bộ, Phó BTCB, Chi uỷ viên, Đảng viên...).
+    // Dùng cho phần đầu cột "Làm gì, chức vụ, đơn vị công tác" khi xuất Word.
+    chuc_vu_dang?: string | null;
+
     // 12
     chi_bo_ket_nap?: string | null;
     nguoi_gioi_thieu_1?: string | null;

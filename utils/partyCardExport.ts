@@ -458,6 +458,10 @@ const buildWorkHistory = (d: PartyDossier) => {
     );
 
     const items = d.workHistory;
+    // Phần "Làm gì" ở đầu cột lấy theo chức vụ đảng đã kê khai; nếu bỏ trống mà
+    // là đảng viên (có ngày vào Đảng hoặc số thẻ đảng) thì mặc định "Đảng viên".
+    const isPartyMember = !!(d.employee.ngay_vao_dang || d.employee.so_the_dang);
+    const partyRole = val(d.profile.chuc_vu_dang) || (isPartyMember ? 'Đảng viên' : '');
     // Chỉ in đúng số dòng có dữ liệu, không chèn thêm dòng trống.
     // Giữ tối thiểu 1 dòng để bảng không trơ mỗi hàng tiêu đề khi chưa có dữ liệu.
     const total = Math.max(items.length, 1);
@@ -466,10 +470,12 @@ const buildWorkHistory = (d: PartyDossier) => {
         const period = item
             ? `${fmtMonthYear(item.tu_thang_nam) || '.......'} - ${fmtMonthYear(item.den_thang_nam) || 'nay'}`
             : '';
-        const role = item
-            ? [item.chuc_vu, item.cap_bac ? `(${item.cap_bac})` : ''].filter(Boolean).join(' ')
+        // Cột "Làm gì, chức vụ, đơn vị công tác": tách các thành phần bằng dấu chấm
+        // phẩy để không lẫn với dấu phẩy vốn có trong tên đơn vị công tác.
+        // VD: "Bí thư chi bộ; Điều dưỡng viên; Khoa Hồi sức ngoại, Bệnh viện Quân y 103"
+        const detail = item
+            ? [partyRole, item.chuc_vu, item.don_vi_cong_tac].filter(Boolean).join('; ')
             : '';
-        const detail = item ? [role, item.don_vi_cong_tac, item.ghi_chu].filter(Boolean).join(', ') : '';
         rows.push(
             row([
                 cell({ w: grid[0], text: period, align: 'center' }),
