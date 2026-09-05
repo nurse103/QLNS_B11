@@ -753,13 +753,16 @@ const buildEconomyAndSign = (d: PartyDossier) => {
     );
 
     // Khối ký: NGƯỜI KHAI | XÁC NHẬN CỦA CHI UỶ CHI BỘ
-    const signDate = p.ngay_khai
-        ? (() => {
-              const m = String(p.ngay_khai).match(/^(\d{4})-(\d{2})-(\d{2})/);
-              return m ? `ngày ${m[3]} tháng ${m[2]} năm ${m[1]}` : 'ngày ...... tháng ...... năm 20......';
-          })()
-        : 'ngày ...... tháng ...... năm 20......';
-    const place = val(p.noi_khai) || '.....................';
+    // Ngày khai và địa danh: ưu tiên dữ liệu đã nhập; nếu trống thì tự điền
+    // theo ngày xuất file, địa danh mặc định "Hà Nội".
+    const fmtSignDate = (value: string) => {
+        const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `ngày ${m[3]} tháng ${m[2]} năm ${m[1]}` : '';
+    };
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const signDate = fmtSignDate(val(p.ngay_khai)) || fmtSignDate(todayIso);
+    const place = val(p.noi_khai) || 'Hà Nội';
 
     const grid = [4677, 4678];
     const signRow = row(

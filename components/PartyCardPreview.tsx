@@ -219,10 +219,18 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
     const fitScale = Math.min(1, availWidth / pageSize.w);
     const scale = zoomMode === 'fit' ? fitScale : 1;
 
+    // Ngày khai: ưu tiên dữ liệu đã nhập, trống thì tự điền theo ngày hiện tại.
     const signDate = (() => {
-        const m = String(p.ngay_khai ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
-        return m ? `ngày ${m[3]} tháng ${m[2]} năm ${m[1]}` : 'ngày ...... tháng ...... năm 20......';
+        const src = String(p.ngay_khai ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const m = src ?? (() => {
+            const t = new Date();
+            const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+            return iso.match(/^(\d{4})-(\d{2})-(\d{2})/)!;
+        })();
+        return `ngày ${m[3]} tháng ${m[2]} năm ${m[1]}`;
     })();
+    // Địa danh: ưu tiên dữ liệu đã nhập, trống thì mặc định "Hà Nội".
+    const signPlace = val(p.noi_khai) || 'Hà Nội';
 
     return (
         /* Bố cục phẳng: nằm thẳng trong trang Quản lý Đảng viên, không phải popup */
@@ -597,7 +605,7 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                         <div className="flex mt-8">
                             <div className="w-1/2 text-center">
                                 <p className="italic">
-                                    {val(p.noi_khai) || '.....................'}, {signDate}
+                                    {signPlace}, {signDate}
                                 </p>
                                 <p className="font-bold mt-1">NGƯỜI KHAI</p>
                                 <p className="italic" style={{ fontSize: 14.5 }}>
