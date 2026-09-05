@@ -175,9 +175,22 @@ const line2 = (
     slot1: Slot,
     label2: string,
     slot2: Slot,
-    o: ParaOptions & { splitAt?: number } = {}
+    o: ParaOptions & { splitAt?: number; align2Right?: boolean } = {}
 ) => {
-    const { splitAt, ...paraOptions } = o;
+    const { splitAt, align2Right, ...paraOptions } = o;
+
+    // align2Right: mục 1 sát lề trái, mục 2 sát lề phải (hai cột rõ rệt).
+    // Dùng một tab căn phải tại lề phải; khoảng giữa hai cột để trống, không kéo chấm.
+    if (align2Right) {
+        const seg1 = run(`${label1} `) + (slot1.text ? run(slot1.text) : '');
+        const seg2 = run(`${label2} `) + (slot2.text ? run(slot2.text) : '');
+        return para(seg1 + tabRun() + seg2, {
+            before: 30,
+            tabStops: [{ pos: CONTENT_W, val: 'right', dot: false }],
+            ...paraOptions,
+        });
+    }
+
     const stops: NonNullable<ParaOptions['tabStops']> = [
         { pos: splitAt ?? HALF, val: 'left', dot: !slot1.filled },
     ];
@@ -403,8 +416,8 @@ const buildPersonalInfo = (d: PartyDossier) => {
     const { employee: e, profile: p } = d;
     const parts: string[] = [];
 
-    parts.push(line2('01) Họ và tên khai sinh:', v(val(e.ho_va_ten).toUpperCase()), '02) Giới tính (nam, nữ):', v(e.gioi_tinh), { before: 160 }));
-    parts.push(line2('03) Tên gọi khác:', v(p.ten_goi_khac), '04) Sinh ngày:', vDate(e.ngay_sinh)));
+    parts.push(line2('01) Họ và tên khai sinh:', v(val(e.ho_va_ten).toUpperCase()), '02) Giới tính (nam, nữ):', v(e.gioi_tinh), { before: 160, align2Right: true }));
+    parts.push(line2('03) Tên gọi khác:', v(p.ten_goi_khac), '04) Sinh ngày:', vDate(e.ngay_sinh), { align2Right: true }));
     parts.push(line1('05) Nơi đăng ký khai sinh:', v(p.noi_dang_ky_khai_sinh)));
     parts.push(line1('06) Quê quán:', v(e.que_quan)));
     parts.push(line1('07) Nơi thường trú:', v(e.noi_o_hien_nay)));

@@ -72,6 +72,7 @@ const Line2 = ({
     s2,
     indent = 0,
     split = 0.5,
+    rightAlign = false,
 }: {
     label1: string;
     s1: ReturnType<typeof slot>;
@@ -79,18 +80,32 @@ const Line2 = ({
     s2: ReturnType<typeof slot>;
     indent?: number;
     split?: number;
-}) => (
-    <div className="flex items-baseline" style={{ paddingLeft: indent }}>
-        <span className="flex items-baseline shrink-0" style={{ width: `${split * 100}%` }}>
-            <span className="shrink-0">{label1}&nbsp;</span>
-            <Slot {...s1} />
-        </span>
-        <span className="flex items-baseline flex-1">
-            <span className="shrink-0">{label2}&nbsp;</span>
-            <Slot {...s2} />
-        </span>
-    </div>
-);
+    rightAlign?: boolean;
+}) =>
+    rightAlign ? (
+        // Mục 1 sát lề trái, mục 2 sát lề phải - hai cột rõ rệt, khoảng giữa để trống.
+        <div className="flex items-baseline justify-between gap-8" style={{ paddingLeft: indent }}>
+            <span className="flex items-baseline min-w-0">
+                <span className="shrink-0">{label1}&nbsp;</span>
+                {s1.text && <span className="whitespace-pre-wrap">{s1.text}</span>}
+            </span>
+            <span className="flex items-baseline shrink-0">
+                <span className="shrink-0">{label2}&nbsp;</span>
+                {s2.text && <span className="whitespace-pre-wrap">{s2.text}</span>}
+            </span>
+        </div>
+    ) : (
+        <div className="flex items-baseline" style={{ paddingLeft: indent }}>
+            <span className="flex items-baseline shrink-0" style={{ width: `${split * 100}%` }}>
+                <span className="shrink-0">{label1}&nbsp;</span>
+                <Slot {...s1} />
+            </span>
+            <span className="flex items-baseline flex-1">
+                <span className="shrink-0">{label2}&nbsp;</span>
+                <Slot {...s2} />
+            </span>
+        </div>
+    );
 
 /** Nhãn một dòng, nội dung xuống dòng dưới - cho mục có nhãn dài (23, 25). */
 const LineBlock = ({ label, s }: { label: string; s: ReturnType<typeof slot> }) => (
@@ -375,12 +390,13 @@ export const PartyCardPreview: React.FC<PartyCardPreviewProps> = ({ employee, ca
                         {/* Mục 01 - 20 */}
                         <div className="mt-4 space-y-[3px]">
                             <Line2
+                                rightAlign
                                 label1="01) Họ và tên khai sinh:"
                                 s1={slot(val(e.ho_va_ten).toUpperCase())}
                                 label2="02) Giới tính (nam, nữ):"
                                 s2={slot(e.gioi_tinh)}
                             />
-                            <Line2 label1="03) Tên gọi khác:" s1={slot(p.ten_goi_khac)} label2="04) Sinh ngày:" s2={dateSlot(e.ngay_sinh)} />
+                            <Line2 rightAlign label1="03) Tên gọi khác:" s1={slot(p.ten_goi_khac)} label2="04) Sinh ngày:" s2={dateSlot(e.ngay_sinh)} />
                             <Line1 label="05) Nơi đăng ký khai sinh:" s={slot(p.noi_dang_ky_khai_sinh)} />
                             <Line1 label="06) Quê quán:" s={slot(e.que_quan)} />
                             <Line1 label="07) Nơi thường trú:" s={slot(e.noi_o_hien_nay)} />
