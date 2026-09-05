@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getWorkHistoryRecords, createWorkHistoryRecord, updateWorkHistoryRecord, deleteWorkHistoryRecord, WorkHistoryRecord } from '../services/workHistoryService';
+import { getWorkHistoryRecords, createWorkHistoryRecord, updateWorkHistoryRecord, deleteWorkHistoryRecord, bulkUpdateChucVuDang, WorkHistoryRecord } from '../services/workHistoryService';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { CHUC_VU_DANG_GOI_Y } from '../services/partyService';
-import { Search, Plus, Briefcase, ChevronRight, X, Save, Edit, Trash2, Download } from 'lucide-react';
+import { Search, Plus, Briefcase, ChevronRight, X, Save, Edit, Trash2, Download, CheckSquare } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export const WorkHistoryModule = () => {
@@ -16,6 +16,11 @@ export const WorkHistoryModule = () => {
     // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<WorkHistoryRecord>>({});
+
+    // Bulk selection state
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [bulkChucVuDang, setBulkChucVuDang] = useState('');
+    const [isBulkSaving, setIsBulkSaving] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -76,6 +81,44 @@ export const WorkHistoryModule = () => {
         } catch (error) {
             console.error(error);
             alert("Lưu thất bại");
+        }
+    };
+
+    // Bulk selection handlers
+    const toggleSelect = (id?: number) => {
+        if (!id) return;
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectGroup = (records: WorkHistoryRecord[], checked: boolean) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            records.forEach(r => {
+                if (r.id == null) return;
+                if (checked) next.add(r.id); else next.delete(r.id);
+            });
+            return next;
+        });
+    };
+
+    const clearSelection = () => setSelectedIds(new Set());
+
+    const handleBulkUpdate = async () => {
+        if (selectedIds.size === 0) return;
+        setIsBulkSaving(true);
+        try {
+            await bulkUpdateChucVuDang(Array.from(selectedIds), bulkChucVuDang);
+            clearSelection();
+            setBulkChucVuDang('');
+            await fetchData();
+        } catch (error) {
+            alert("Cập nhật hàng loạt thất bại");
+        } finally {
+            setIsBulkSaving(false);
         }
     };
 
@@ -241,24 +284,37 @@ export const WorkHistoryModule = () => {
 
                                                         {/* Mobile View: List of cards */}
                                                         <div className="block md:hidden space-y-3">
-                                                            {group.records.map((r, idx) => (
-                                                                <button
-                                                                    key={idx}
-                                                                    onClick={() => setViewData(r)}
-                                                                    className="w-full flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-[#009900] hover:shadow-md transition-all text-left group"
-                                                                >
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 shrink-0 group-hover:bg-[#009900] group-hover:text-white transition-colors">
-                                                                            <Briefcase size={16} />
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="font-bold text-slate-900 group-hover:text-[#009900] transition-colors">{r.don_vi_cong_tac}</div>
-                                                                            <div className="text-[10px] text-slate-500 uppercase tracking-tighter">{formatDate(r.tu_thang_nam)} - {formatDate(r.den_thang_nam)} • Nhấn xem chi tiết</div>
-                                                                        </div>
+                                                            {group.records.map((r, idx) => {
+                                                                const checked = r.id != null && selectedIds.has(r.id);
+                                                                return (
+                                                                    <div
+                                                                        key={idx}
+                                                                        className={`w-full flex items-center gap-3 p-4 bg-white border rounded-xl shadow-sm transition-all ${checked ? 'border-[#009900] bg-green-50/60' : 'border-slate-200'}`}
+                                                                    >
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            className="w-5 h-5 accent-[#009900] cursor-pointer shrink-0"
+                                                                            checked={checked}
+                                                                            onChange={() => toggleSelect(r.id)}
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => setViewData(r)}
+                                                                            className="flex-1 flex items-center justify-between text-left group"
+                                                                        >
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 shrink-0 group-hover:bg-[#009900] group-hover:text-white transition-colors">
+                                                                                    <Briefcase size={16} />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <div className="font-bold text-slate-900 group-hover:text-[#009900] transition-colors">{r.don_vi_cong_tac}</div>
+                                                                                    <div className="text-[10px] text-slate-500 uppercase tracking-tighter">{formatDate(r.tu_thang_nam)} - {formatDate(r.den_thang_nam)} • Nhấn xem chi tiết</div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <ChevronRight size={16} className="text-slate-300 group-hover:text-[#009900] translate-x-0 group-hover:translate-x-1 transition-all" />
+                                                                        </button>
                                                                     </div>
-                                                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-[#009900] translate-x-0 group-hover:translate-x-1 transition-all" />
-                                                                </button>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
 
                                                         {/* Desktop View: Table */}
@@ -266,6 +322,15 @@ export const WorkHistoryModule = () => {
                                                             <table className="w-full text-xs text-left">
                                                                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                                                                     <tr>
+                                                                        <th className="px-4 py-3 w-10 text-center">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="w-4 h-4 accent-[#009900] cursor-pointer"
+                                                                                title="Chọn tất cả giai đoạn"
+                                                                                checked={group.records.length > 0 && group.records.every(r => r.id != null && selectedIds.has(r.id))}
+                                                                                onChange={e => toggleSelectGroup(group.records, e.target.checked)}
+                                                                            />
+                                                                        </th>
                                                                         <th className="px-4 py-3">Thời gian</th>
                                                                         <th className="px-4 py-3">Đơn vị công tác</th>
                                                                         <th className="px-4 py-3">Cấp bậc</th>
@@ -276,7 +341,15 @@ export const WorkHistoryModule = () => {
                                                                 </thead>
                                                                 <tbody className="divide-y divide-slate-100 bg-white">
                                                                     {group.records.map((r, idx) => (
-                                                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                                        <tr key={idx} className={`hover:bg-slate-50/50 transition-colors ${r.id != null && selectedIds.has(r.id) ? 'bg-green-50/60' : ''}`}>
+                                                                            <td className="px-4 py-3 text-center">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    className="w-4 h-4 accent-[#009900] cursor-pointer"
+                                                                                    checked={r.id != null && selectedIds.has(r.id)}
+                                                                                    onChange={() => toggleSelect(r.id)}
+                                                                                />
+                                                                            </td>
                                                                             <td className="px-4 py-3">
                                                                                 <div className="font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded w-fit">
                                                                                     {formatDate(r.tu_thang_nam)} - {formatDate(r.den_thang_nam)}
@@ -312,6 +385,46 @@ export const WorkHistoryModule = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Bulk action bar */}
+            {selectedIds.size > 0 && (
+                <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[55] w-[calc(100%-2rem)] max-w-3xl">
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="flex items-center gap-2 text-sm font-bold text-slate-800 shrink-0 px-1">
+                            <CheckSquare size={18} className="text-[#009900]" />
+                            Đã chọn {selectedIds.size} giai đoạn
+                        </div>
+                        <div className="flex-1 flex items-center gap-2">
+                            <input
+                                type="text"
+                                list="goi-y-chuc-vu-dang-bulk"
+                                value={bulkChucVuDang}
+                                onChange={e => setBulkChucVuDang(e.target.value)}
+                                placeholder="Chức vụ đảng áp dụng cho các dòng đã chọn (bỏ trống = xóa)"
+                                className="flex-1 min-w-0 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#009900]"
+                            />
+                            <datalist id="goi-y-chuc-vu-dang-bulk">
+                                {CHUC_VU_DANG_GOI_Y.map(v => <option key={v} value={v} />)}
+                            </datalist>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={handleBulkUpdate}
+                                disabled={isBulkSaving}
+                                className="px-4 py-2 bg-[#009900] text-white rounded-lg text-sm font-bold hover:bg-[#007700] disabled:opacity-60 flex items-center gap-2 transition-colors"
+                            >
+                                <Save size={16} /> {isBulkSaving ? 'Đang lưu...' : 'Cập nhật'}
+                            </button>
+                            <button
+                                onClick={clearSelection}
+                                className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-1 transition-colors"
+                            >
+                                <X size={16} /> Bỏ chọn
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal Detail (Mobile) */}
             {viewData && (

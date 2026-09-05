@@ -69,6 +69,20 @@ export const updateWorkHistoryRecord = async (id: number, updates: Partial<WorkH
     return data;
 };
 
+export const bulkUpdateChucVuDang = async (ids: number[], chuc_vu_dang: string | null) => {
+    if (!ids.length) return;
+    const value = chuc_vu_dang && chuc_vu_dang.trim() ? chuc_vu_dang.trim() : null;
+    const { error } = await supabase
+        .from('qua_trinh_cong_tac')
+        .update({ chuc_vu_dang: value })
+        .in('id', ids);
+
+    if (error) {
+        console.error('Error bulk updating chuc_vu_dang:', error);
+        throw error;
+    }
+};
+
 export const deleteWorkHistoryRecord = async (id: number) => {
     // Get the record before deleting to know the dsnv_id
     const { data: record } = await supabase
