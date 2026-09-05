@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getPersonnel, Employee } from '../services/personnelService';
-import { Search, Filter, BookOpen, Flag, Image as ImageIcon, Eye, Pencil, FileDown } from 'lucide-react';
+import { Search, Filter, BookOpen, Flag, Image as ImageIcon, Eye, Pencil, FileDown, Loader2 } from 'lucide-react';
 import { PartyCardPreview } from './PartyCardPreview';
 import { PartyProfileModal } from './PartyProfileModal';
+import { getPartyDossier } from '../services/partyService';
+import { exportPartyCard } from '../utils/partyCardExport';
 import { getAuthUser } from '../services/authService';
 import { canEditPersonnelRecord } from '../utils/ownershipUtils';
 
@@ -14,8 +16,8 @@ export const PartyModule = () => {
     const [previewEmployee, setPreviewEmployee] = useState<Employee | null>(null);
     // Modal nhập liệu, mở từ nút "Sửa phiếu" trong bản xem trước
     const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
-    // Modal xuất lý lịch (popup xem trước + tải Word), mở từ nút "Xuất" trên bảng
-    const [exportEmployee, setExportEmployee] = useState<Employee | null>(null);
+    // Đang xuất lý lịch cho đảng viên nào (hiển thị spinner trên nút)
+    const [exportingId, setExportingId] = useState<number | null>(null);
     const authUser = useMemo(() => getAuthUser(), []);
 
     // Tải lại danh sách - dùng cả khi mở trang và sau khi lưu phiếu đảng viên
@@ -93,6 +95,21 @@ export const PartyModule = () => {
     const handleView = (emp: Employee) => setPreviewEmployee(emp);
     // Mở thẳng phiếu nhập liệu, không phải đi qua bản xem trước
     const handleEdit = (emp: Employee) => setProfileEmployee(emp);
+
+    // Bấm "Xuất": tải thẳng file Word, không mở popup xem trước
+    const handleExport = async (emp: Employee) => {
+        if (exportingId) return;
+        setExportingId(emp.id);
+        try {
+            const dossier = await getPartyDossier(emp.id);
+            await exportPartyCard(dossier);
+        } catch (error) {
+            console.error('Xuất lý lịch thất bại:', error);
+            alert('Xuất lý lịch Word thất bại.');
+        } finally {
+            setExportingId(null);
+        }
+    };
     // Nút sửa bám theo tài khoản đang đăng nhập:
     // admin sửa được mọi hồ sơ, người khác chỉ sửa hồ sơ mang đúng họ tên của mình.
     const canEditEmployee = (emp: Employee) => canEditPersonnelRecord(emp, authUser);
@@ -269,10 +286,11 @@ export const PartyModule = () => {
                                                         <Eye size={14} /> Xem
                                                     </button>
                                                     <button
-                                                        onClick={() => setExportEmployee(emp)}
-                                                        className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 flex items-center gap-1.5"
+                                                        onClick={() => handleExport(emp)}
+                                                        disabled={exportingId === emp.id}
+                                                        className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 disabled:opacity-60 flex items-center gap-1.5"
                                                     >
-                                                        <FileDown size={14} /> Xuất
+                                                        {exportingId === emp.id ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Xuất
                                                     </button>
                                                     {canEditEmployee(emp) && (
                                                         <button
@@ -317,10 +335,11 @@ export const PartyModule = () => {
                                                 <Eye size={16} /> Xem
                                             </button>
                                             <button
-                                                onClick={() => setExportEmployee(emp)}
-                                                className="flex-1 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium active:bg-blue-100 flex items-center justify-center gap-1.5"
+                                                onClick={() => handleExport(emp)}
+                                                disabled={exportingId === emp.id}
+                                                className="flex-1 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium active:bg-blue-100 disabled:opacity-60 flex items-center justify-center gap-1.5"
                                             >
-                                                <FileDown size={16} /> Xuất
+                                                {exportingId === emp.id ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />} Xuất
                                             </button>
                                             {canEditEmployee(emp) && (
                                                 <button
@@ -340,24 +359,6 @@ export const PartyModule = () => {
                     </div>
                 )}
             </div>
-
-            {/* Modal xuất lý lịch: bản xem trước A4 + nút tải Word */}
-            {exportEmployee && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
-                    <div className="w-full max-w-4xl my-2 sm:my-6">
-                        <PartyCardPreview
-                            employee={exportEmployee}
-                            canEdit={canEditEmployee(exportEmployee)}
-                            onClose={() => setExportEmployee(null)}
-                            onEdit={() => {
-                                const emp = exportEmployee;
-                                setExportEmployee(null);
-                                setProfileEmployee(emp);
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
 
         </div>
     );
