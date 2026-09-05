@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getPersonnel, Employee } from '../services/personnelService';
-import { Search, Filter, BookOpen, Flag, Image as ImageIcon, Eye, Pencil } from 'lucide-react';
+import { Search, Filter, BookOpen, Flag, Image as ImageIcon, Eye, Pencil, FileDown } from 'lucide-react';
 import { PartyCardPreview } from './PartyCardPreview';
 import { PartyProfileModal } from './PartyProfileModal';
 import { getAuthUser } from '../services/authService';
@@ -14,6 +14,8 @@ export const PartyModule = () => {
     const [previewEmployee, setPreviewEmployee] = useState<Employee | null>(null);
     // Modal nhập liệu, mở từ nút "Sửa phiếu" trong bản xem trước
     const [profileEmployee, setProfileEmployee] = useState<Employee | null>(null);
+    // Modal xuất lý lịch (popup xem trước + tải Word), mở từ nút "Xuất" trên bảng
+    const [exportEmployee, setExportEmployee] = useState<Employee | null>(null);
     const authUser = useMemo(() => getAuthUser(), []);
 
     // Tải lại danh sách - dùng cả khi mở trang và sau khi lưu phiếu đảng viên
@@ -266,6 +268,12 @@ export const PartyModule = () => {
                                                     >
                                                         <Eye size={14} /> Xem
                                                     </button>
+                                                    <button
+                                                        onClick={() => setExportEmployee(emp)}
+                                                        className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-xs font-medium hover:bg-blue-100 flex items-center gap-1.5"
+                                                    >
+                                                        <FileDown size={14} /> Xuất
+                                                    </button>
                                                     {canEditEmployee(emp) && (
                                                         <button
                                                             onClick={() => handleEdit(emp)}
@@ -308,6 +316,12 @@ export const PartyModule = () => {
                                             >
                                                 <Eye size={16} /> Xem
                                             </button>
+                                            <button
+                                                onClick={() => setExportEmployee(emp)}
+                                                className="flex-1 px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 text-sm font-medium active:bg-blue-100 flex items-center justify-center gap-1.5"
+                                            >
+                                                <FileDown size={16} /> Xuất
+                                            </button>
                                             {canEditEmployee(emp) && (
                                                 <button
                                                     onClick={() => handleEdit(emp)}
@@ -326,6 +340,24 @@ export const PartyModule = () => {
                     </div>
                 )}
             </div>
+
+            {/* Modal xuất lý lịch: bản xem trước A4 + nút tải Word */}
+            {exportEmployee && (
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto">
+                    <div className="w-full max-w-4xl my-2 sm:my-6">
+                        <PartyCardPreview
+                            employee={exportEmployee}
+                            canEdit={canEditEmployee(exportEmployee)}
+                            onClose={() => setExportEmployee(null)}
+                            onEdit={() => {
+                                const emp = exportEmployee;
+                                setExportEmployee(null);
+                                setProfileEmployee(emp);
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
 
         </div>
     );
