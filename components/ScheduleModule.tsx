@@ -547,7 +547,14 @@ export const ScheduleModule = () => {
                                                 )
                                             })() : '-'}
                                         </td>
-                                        <td className={`px-4 py-3 border-r border-slate-300 font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>{schedule.bac_sy}</td>
+                                        <td className={`px-4 py-3 border-r border-slate-300 font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-[#009900]'}`}>
+                                            <div>{schedule.bac_sy}</div>
+                                            {schedule.ghi_chu && (
+                                                <div className={`mt-1 text-xs font-semibold italic break-words ${isWeekend(schedule.ngay_truc) ? 'text-red-500' : 'text-orange-600'}`}>
+                                                    {schedule.ghi_chu}
+                                                </div>
+                                            )}
+                                        </td>
 
                                         <td className={`px-4 py-3 border-r border-slate-300 text-slate-600`}>{schedule.sau_dai_hoc}</td>
                                         <td className={`px-4 py-3 border-r border-slate-300 whitespace-normal break-words font-medium ${isWeekend(schedule.ngay_truc) ? 'text-red-600' : 'text-blue-700'}`} title={schedule.dieu_duong || ''}>{schedule.dieu_duong}</td>
