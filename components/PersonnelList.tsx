@@ -505,6 +505,8 @@ export const PersonnelList = () => {
 
     return (
         <div className="p-4 md:p-6 pb-20 md:pb-6">
+            {/* Khi mở form nhập nhân sự thì ẩn danh sách, hiển thị form dạng trang phẳng */}
+            {!isModalOpen && (<>
             <h1 className="text-2xl font-bold text-slate-800 mb-6">Danh sách nhân viên</h1>
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4">
@@ -860,6 +862,7 @@ export const PersonnelList = () => {
                     </div>
                 </div>
             </div >
+            </>)}
 
             {/* Employee Details View Modal */}
             {
@@ -876,12 +879,12 @@ export const PersonnelList = () => {
                 )
             }
 
-            {/* Add New Employee Modal */}
+            {/* Form nhập nhân sự - dạng trang phẳng (không phải popup) */}
             {
                 isModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 md:p-4">
-                        <div className="bg-white rounded-none md:rounded-xl shadow-xl w-full max-w-2xl h-full md:h-auto md:max-h-[90vh] overflow-hidden flex flex-col">
-                            <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-100 shrink-0">
+                    <div className="animate-fade-in">
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                            <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-100 shrink-0 sticky top-0 bg-white z-10">
                                 <h2 className="text-lg md:text-xl font-bold text-slate-800 truncate pr-4">{formData.id ? 'Cập nhật nhân viên' : 'Thêm nhân viên'}</h2>
                                 <button onClick={() => {
                                     setIsModalOpen(false);
