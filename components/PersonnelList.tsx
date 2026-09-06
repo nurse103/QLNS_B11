@@ -1049,11 +1049,11 @@ export const PersonnelList = () => {
                                                         <label className="text-sm font-medium text-slate-700">Ngày cấp CMQĐ</label>
                                                         <input type="date" name="ngay_cap_cmqd" value={formData.ngay_cap_cmqd || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
-                                                    <div className="space-y-2 col-span-full">
+                                                    <div className="space-y-2 sm:col-span-2">
                                                         <label className="text-sm font-medium text-slate-700">Quê quán</label>
                                                         <input type="text" name="que_quan" value={formData.que_quan || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
-                                                    <div className="space-y-2 col-span-full">
+                                                    <div className="space-y-2 sm:col-span-2">
                                                         <label className="text-sm font-medium text-slate-700">Nơi ở hiện nay</label>
                                                         <input type="text" name="noi_o_hien_nay" value={formData.noi_o_hien_nay || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
