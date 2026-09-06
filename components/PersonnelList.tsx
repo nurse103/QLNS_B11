@@ -936,10 +936,10 @@ export const PersonnelList = () => {
                                                     <span className="w-1 h-6 bg-blue-600 rounded-full"></span>
                                                     Thông tin cơ bản
                                                 </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                                                     {/* Ảnh chân dung 3x4 - dùng chung với ảnh 3x4 của Phiếu đảng viên
                                                         (cùng cột dsnv.avatar, cùng bucket 'the_dang'). */}
-                                                    <div className="space-y-2 md:col-span-2">
+                                                    <div className="space-y-2 col-span-full">
                                                         <label className="text-sm font-medium text-slate-700">Ảnh chân dung (3x4)</label>
                                                         <div className="flex items-center gap-4">
                                                             <div className="w-[90px] h-[120px] shrink-0 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
@@ -1049,11 +1049,11 @@ export const PersonnelList = () => {
                                                         <label className="text-sm font-medium text-slate-700">Ngày cấp CMQĐ</label>
                                                         <input type="date" name="ngay_cap_cmqd" value={formData.ngay_cap_cmqd || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
-                                                    <div className="space-y-2 md:col-span-2">
+                                                    <div className="space-y-2 col-span-full">
                                                         <label className="text-sm font-medium text-slate-700">Quê quán</label>
                                                         <input type="text" name="que_quan" value={formData.que_quan || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
-                                                    <div className="space-y-2 md:col-span-2">
+                                                    <div className="space-y-2 col-span-full">
                                                         <label className="text-sm font-medium text-slate-700">Nơi ở hiện nay</label>
                                                         <input type="text" name="noi_o_hien_nay" value={formData.noi_o_hien_nay || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
@@ -1095,7 +1095,7 @@ export const PersonnelList = () => {
                                                     <span className="w-1 h-6 bg-red-600 rounded-full"></span>
                                                     Thông tin đảng viên
                                                 </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                                                     <div className="space-y-2">
                                                         <label className="text-sm font-medium text-slate-700">Ngày vào Đảng</label>
                                                         <input type="date" name="ngay_vao_dang" value={formData.ngay_vao_dang || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
@@ -1116,7 +1116,7 @@ export const PersonnelList = () => {
                                                         <label className="text-sm font-medium text-slate-700">Nơi cấp thẻ Đảng</label>
                                                         <input type="text" name="noi_cap_the_dang" value={formData.noi_cap_the_dang || ''} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
                                                     </div>
-                                                    <div className="space-y-2 md:col-span-2">
+                                                    <div className="space-y-2 col-span-full">
                                                         <label className="text-sm font-medium text-slate-700">Ảnh thẻ Đảng</label>
                                                         <div className="flex items-center gap-4">
                                                             {formData.anh_the_dang && (
@@ -1176,8 +1176,8 @@ export const PersonnelList = () => {
                                                 )}
                                             </div>
                                             {/* Add Form */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="col-span-1 md:col-span-2"><h4 className="text-sm font-bold text-slate-800">Thêm thành viên mới</h4></div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                                                <div className="col-span-full"><h4 className="text-sm font-bold text-slate-800">Thêm thành viên mới</h4></div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Mối quan hệ</label>
                                                     <input
@@ -1227,11 +1227,11 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">Nơi ở hiện nay</label>
                                                     <input type="text" value={tempFamily.noi_o_hien_nay || ''} onChange={e => setTempFamily({ ...tempFamily, noi_o_hien_nay: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="space-y-2 col-span-1 md:col-span-2">
+                                                <div className="space-y-2 col-span-full">
                                                     <label className="text-sm font-medium text-slate-700">Chức danh, chức vụ, đơn vị công tác</label>
                                                     <input type="text" value={tempFamily.chuc_vu_don_vi || ''} onChange={e => setTempFamily({ ...tempFamily, chuc_vu_don_vi: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="col-span-1 md:col-span-2">
+                                                <div className="col-span-full">
                                                     <button
                                                         type="button"
                                                         onClick={() => addItem('family', tempFamily, setTempFamily, setFamilyList)}
@@ -1268,8 +1268,8 @@ export const PersonnelList = () => {
                                             </div>
 
                                             {/* Add Form */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="col-span-1 md:col-span-2"><h4 className="text-sm font-bold text-slate-800">Thêm quá trình mới</h4></div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                                                <div className="col-span-full"><h4 className="text-sm font-bold text-slate-800">Thêm quá trình mới</h4></div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Từ thời gian</label>
                                                     <input type="date" value={tempWork.tu_thang_nam || ''} onChange={e => setTempWork({ ...tempWork, tu_thang_nam: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -1278,7 +1278,7 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">Đến thời gian</label>
                                                     <input type="date" value={tempWork.den_thang_nam || ''} onChange={e => setTempWork({ ...tempWork, den_thang_nam: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="space-y-2 md:col-span-2">
+                                                <div className="space-y-2 col-span-full">
                                                     <label className="text-sm font-medium text-slate-700">Đơn vị công tác</label>
                                                     <input type="text" value={tempWork.don_vi_cong_tac || ''} onChange={e => setTempWork({ ...tempWork, don_vi_cong_tac: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
@@ -1290,7 +1290,7 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">Chức vụ</label>
                                                     <input type="text" list="chuc-vu-options" value={tempWork.chuc_vu || ''} onChange={e => setTempWork({ ...tempWork, chuc_vu: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="col-span-1 md:col-span-2">
+                                                <div className="col-span-full">
                                                     <button
                                                         type="button"
                                                         onClick={() => addItem('work', tempWork, setTempWork, setWorkHistoryList)}
@@ -1327,8 +1327,8 @@ export const PersonnelList = () => {
                                             </div>
 
                                             {/* Add Form */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="col-span-1 md:col-span-2"><h4 className="text-sm font-bold text-slate-800">Thêm quá trình đào tạo</h4></div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                                                <div className="col-span-full"><h4 className="text-sm font-bold text-slate-800">Thêm quá trình đào tạo</h4></div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Từ thời gian</label>
                                                     <input type="date" value={tempTraining.tu_thang_nam || ''} onChange={e => setTempTraining({ ...tempTraining, tu_thang_nam: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -1337,7 +1337,7 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">Đến thời gian</label>
                                                     <input type="date" value={tempTraining.den_thang_nam || ''} onChange={e => setTempTraining({ ...tempTraining, den_thang_nam: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="space-y-2 md:col-span-2">
+                                                <div className="space-y-2 col-span-full">
                                                     <label className="text-sm font-medium text-slate-700">Cơ sở đào tạo</label>
                                                     <input type="text" value={tempTraining.ten_co_so_dao_tao || ''} onChange={e => setTempTraining({ ...tempTraining, ten_co_so_dao_tao: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
@@ -1349,7 +1349,7 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">Trình độ</label>
                                                     <input type="text" value={tempTraining.trinh_do_dao_tao || ''} onChange={e => setTempTraining({ ...tempTraining, trinh_do_dao_tao: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="col-span-1 md:col-span-2">
+                                                <div className="col-span-full">
                                                     <button
                                                         type="button"
                                                         onClick={() => addItem('training', tempTraining, setTempTraining, setTrainingList)}
@@ -1386,8 +1386,8 @@ export const PersonnelList = () => {
                                             </div>
 
                                             {/* Add Form */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="col-span-1 md:col-span-2"><h4 className="text-sm font-bold text-slate-800">Thêm đợt nâng lương/quân hàm</h4></div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                                                <div className="col-span-full"><h4 className="text-sm font-bold text-slate-800">Thêm đợt nâng lương/quân hàm</h4></div>
                                                 <div className="space-y-2">
                                                     <label className="text-sm font-medium text-slate-700">Thời gian nhận</label>
                                                     <input type="date" value={tempSalary.thang_nam_nhan || ''} onChange={e => setTempSalary({ ...tempSalary, thang_nam_nhan: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
@@ -1408,7 +1408,7 @@ export const PersonnelList = () => {
                                                     <label className="text-sm font-medium text-slate-700">Hệ số</label>
                                                     <input type="number" step="0.01" value={tempSalary.he_so || ''} onChange={e => setTempSalary({ ...tempSalary, he_so: parseFloat(e.target.value) })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" />
                                                 </div>
-                                                <div className="col-span-1 md:col-span-2">
+                                                <div className="col-span-full">
                                                     <button
                                                         type="button"
                                                         onClick={() => addItem('salary', tempSalary, setTempSalary, setSalaryList)}
