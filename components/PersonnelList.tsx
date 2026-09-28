@@ -20,7 +20,8 @@ import {
     User,
     Upload,
     Loader2,
-    ImageOff
+    ImageOff,
+    Download
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { EmployeeDetailsModal } from './EmployeeDetailsModal';
@@ -407,6 +408,39 @@ export const PersonnelList = () => {
         XLSX.writeFile(wb, "Mau_Nhap_Lieu_Nhan_Su.xlsx");
     };
 
+    // Xuất danh sách nhân viên đang hiển thị (theo ô tìm kiếm và bộ lọc nhanh) ra Excel
+    const handleExportExcel = () => {
+        if (filteredPersonnel.length === 0) {
+            alert('Không có nhân viên nào để xuất.');
+            return;
+        }
+        const headers = [
+            "STT", "Họ và tên", "Ngày sinh", "Giới tính", "Đối tượng", "Cấp bậc", "Chức vụ", "Trình độ",
+            "CCCD", "Ngày cấp CCCD", "CMQĐ", "Ngày cấp CMQĐ", "Quê quán", "Nơi ở hiện nay", "Điện thoại",
+            "Tháng năm tuyển dụng", "Tháng năm nhập ngũ", "Ngày về khoa", "Trạng thái", "Diện quản lý",
+            "Ngày vào đảng", "Ngày chính thức", "Số thẻ đảng", "Ngày cấp thẻ đảng", "Chứng chỉ hành nghề",
+            "Danh hiệu", "Ghi chú"
+        ];
+        const rows = filteredPersonnel.map((p, idx) => [
+            idx + 1, p.ho_va_ten, formatDateVN(p.ngay_sinh), p.gioi_tinh || '', p.doi_tuong || '',
+            p.cap_bac || '', p.chuc_vu || '', p.trinh_do || '',
+            p.cccd || '', formatDateVN(p.ngay_cap_cccd), p.cmqd || '', formatDateVN(p.ngay_cap_cmqd),
+            p.que_quan || '', p.noi_o_hien_nay || '', p.dien_thoai || '',
+            formatDateVN(p.thang_nam_tuyen_dung), formatDateVN(p.thang_nam_nhap_ngu),
+            formatDateVN(p.ngay_ve_khoa_cong_tac), p.trang_thai || '', p.dien_quan_ly || '',
+            formatDateVN(p.ngay_vao_dang), formatDateVN(p.ngay_chinh_thuc), p.so_the_dang || '',
+            formatDateVN(p.ngay_cap_the_dang), p.chung_chi_hanh_nghe || '',
+            p.danh_hieu || '', p.ghi_chu || ''
+        ]);
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        ws['!cols'] = headers.map((h, i) => ({ wch: i === 0 ? 5 : i === 1 ? 25 : Math.max(12, h.length + 2) }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Danh_sach_nhan_vien");
+        const today = new Date();
+        const stamp = `${String(today.getDate()).padStart(2, '0')}${String(today.getMonth() + 1).padStart(2, '0')}${today.getFullYear()}`;
+        XLSX.writeFile(wb, `Danh_sach_nhan_vien_${stamp}.xlsx`);
+    };
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -534,6 +568,14 @@ export const PersonnelList = () => {
                                     <Edit size={16} /> <span className="hidden md:inline">Cập nhật ({selectedIds.size})</span>
                                 </button>
                             )}
+
+                            <button
+                                onClick={handleExportExcel}
+                                title="Xuất danh sách nhân viên ra Excel"
+                                className="px-3 py-2 bg-emerald-700 text-white rounded-lg text-sm font-medium hover:bg-emerald-800 flex items-center gap-2 whitespace-nowrap"
+                            >
+                                <Download size={16} /> <span className="hidden md:inline">Xuất Excel</span>
+                            </button>
 
                             {can_add && (
                                 <>
