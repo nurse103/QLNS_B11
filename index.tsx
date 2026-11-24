@@ -13,3 +13,10 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Đăng ký service worker cho PWA (chỉ bản build, tránh cache khi đang dev)
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => console.error('SW register failed:', err));
+  });
+}

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useParams, useLocation, Navigate, Link } from 'react-router-dom';
-import { ArrowLeft, Home, Menu, LayoutGrid } from 'lucide-react';
+import { ArrowLeft, Home, Menu, LayoutGrid, Download, Share, PlusSquare, X } from 'lucide-react';
 import { MenuItem } from '../types';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 // Logo ứng dụng (đặt file tại public/logo.png)
 export const APP_LOGO_SRC = '/logo.png';
@@ -79,6 +80,60 @@ export const getMobileBackPath = (menuItems: MenuItem[], pathname: string) => {
 };
 
 /**
+ * Nút "Cài đặt ứng dụng" trên trang chủ mobile.
+ * Android/Chrome: mở hộp thoại cài đặt của trình duyệt.
+ * iOS/Safari: hiện hướng dẫn "Thêm vào MH chính". Ẩn khi đã cài.
+ */
+const InstallAppButton = () => {
+  const { canInstall, isIOS, promptInstall } = usePWAInstall();
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  if (!canInstall && !isIOS) return null;
+
+  return (
+    <>
+      <button
+        onClick={() => (canInstall ? promptInstall() : setShowIOSGuide(true))}
+        className="w-full mb-6 flex items-center gap-3 rounded-2xl bg-white border border-primary-200 px-4 py-3 shadow-sm active:scale-[0.98] transition-transform"
+      >
+        <span className="w-10 h-10 shrink-0 rounded-xl bg-primary-600 text-white flex items-center justify-center">
+          <Download size={20} />
+        </span>
+        <span className="flex-1 text-left min-w-0">
+          <span className="block text-sm font-bold text-primary-700">Cài đặt ứng dụng</span>
+          <span className="block text-xs text-slate-500">Thêm vào màn hình chính để mở nhanh như app</span>
+        </span>
+      </button>
+
+      {showIOSGuide && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center animate-fade-in" onClick={() => setShowIOSGuide(false)}>
+          <div className="w-full max-w-md bg-white rounded-t-2xl p-5 pb-8 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800">Cài đặt trên iPhone/iPad</h3>
+              <button onClick={() => setShowIOSGuide(false)} className="p-1 text-slate-400" aria-label="Đóng"><X size={20} /></button>
+            </div>
+            <ol className="space-y-3 text-sm text-slate-700">
+              <li className="flex items-center gap-3">
+                <span className="w-6 h-6 shrink-0 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center text-xs">1</span>
+                <span>Mở trang này bằng <b>Safari</b>, bấm nút Chia sẻ <Share size={16} className="inline -mt-1 text-blue-500" /> ở thanh dưới.</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="w-6 h-6 shrink-0 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center text-xs">2</span>
+                <span>Chọn <b>Thêm vào MH chính</b> <PlusSquare size={16} className="inline -mt-1" />.</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="w-6 h-6 shrink-0 rounded-full bg-primary-100 text-primary-700 font-bold flex items-center justify-center text-xs">3</span>
+                <span>Bấm <b>Thêm</b> ở góc trên bên phải.</span>
+              </li>
+            </ol>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+/**
  * Lưới menu dạng icon cho mobile.
  * - "/"          : danh sách menu cấp 1
  * - "/m/:groupId": danh sách menu con của một nhóm
@@ -108,6 +163,8 @@ export const MobileHome = ({ menuItems }: { menuItems: MenuItem[] }) => {
           </div>
         </div>
       )}
+
+      {!group && <InstallAppButton />}
 
       <div className="grid grid-cols-3 gap-x-3 gap-y-6">
         {items.map((item, index) => {

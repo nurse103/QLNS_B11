@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Quản lý nhân sự - Khoa Hồi sức Ngoại",
+  "short_name": "HS Ngoại",
+  "description": "Ứng dụng quản lý nhân sự Khoa Hồi sức Ngoại",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#009900",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
