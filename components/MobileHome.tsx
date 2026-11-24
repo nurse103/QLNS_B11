@@ -94,7 +94,7 @@ const InstallAppButton = () => {
     <>
       <button
         onClick={() => (canInstall ? promptInstall() : setShowIOSGuide(true))}
-        className="w-full mb-6 flex items-center gap-3 rounded-2xl bg-white border border-primary-200 px-4 py-3 shadow-sm active:scale-[0.98] transition-transform"
+        className="w-full mt-8 flex items-center gap-3 rounded-2xl bg-white border border-primary-200 px-4 py-3 shadow-sm active:scale-[0.98] transition-transform"
       >
         <span className="w-10 h-10 shrink-0 rounded-xl bg-primary-600 text-white flex items-center justify-center">
           <Download size={20} />
@@ -164,8 +164,6 @@ export const MobileHome = ({ menuItems }: { menuItems: MenuItem[] }) => {
         </div>
       )}
 
-      {!group && <InstallAppButton />}
-
       <div className="grid grid-cols-3 gap-x-3 gap-y-6">
         {items.map((item, index) => {
           const style = TILE_STYLES[index % TILE_STYLES.length];
@@ -191,6 +189,8 @@ export const MobileHome = ({ menuItems }: { menuItems: MenuItem[] }) => {
           );
         })}
       </div>
+
+      {!group && <InstallAppButton />}
     </div>
   );
 };
