@@ -468,39 +468,41 @@ export const InsuranceModule = () => {
                                     <tr>
                                         <th className="px-3 py-3 w-8"><input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-white cursor-pointer" title="Chọn tất cả" /></th>
                                         <th className="px-3 py-3 w-10">TT</th>
-                                        <th className="px-3 py-3">Họ và tên</th>
-                                        <th className="px-3 py-3">Cấp bậc</th>
-                                        <th className="px-3 py-3">Mã số BHXH</th>
+                                        <th className="px-3 py-3">Họ tên / Cấp bậc</th>
                                         <th className="px-3 py-3">Số CCCD</th>
                                         <th className="px-3 py-3">Ngày sinh</th>
                                         <th className="px-3 py-3 text-center">Nữ</th>
                                         <th className="px-3 py-3">Xã / Tỉnh</th>
                                         <th className="px-3 py-3">Nơi KCB ban đầu</th>
                                         <th className="px-3 py-3">SĐT</th>
-                                        <th className="px-3 py-3">Giá trị thẻ</th>
+                                        <th className="px-3 py-3">Mã số BHXH / Giá trị thẻ</th>
                                         <th className="px-3 py-3">Mục</th>
                                         <th className="px-3 py-3 text-center w-28">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading ? (
-                                        <tr><td colSpan={14} className="px-6 py-10 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
+                                        <tr><td colSpan={12} className="px-6 py-10 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
                                     ) : caNhanView.length === 0 ? (
-                                        <tr><td colSpan={14} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
+                                        <tr><td colSpan={12} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
                                     ) : caNhanView.map((x, i) => (
                                         <tr key={x.id} className={selected.has(x.id!) ? 'bg-green-50/60' : 'hover:bg-slate-50/60'}>
                                             <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 accent-[#009900] cursor-pointer" /></td>
                                             <td className="px-3 py-2.5 text-slate-500">{i + 1}</td>
-                                            <td className="px-3 py-2.5 font-bold text-slate-900 whitespace-nowrap">{x.dsnv?.ho_va_ten}</td>
-                                            <td className="px-3 py-2.5 text-slate-600">{x.dsnv?.cap_bac || ''}</td>
-                                            <td className="px-3 py-2.5 font-medium text-blue-700">{x.ma_so_bhxh || '---'}</td>
+                                            <td className="px-3 py-2.5 whitespace-nowrap">
+                                                <div className="font-bold text-slate-900">{x.dsnv?.ho_va_ten}</div>
+                                                <div className="text-[10px] text-slate-400">{x.dsnv?.cap_bac || ''}</div>
+                                            </td>
                                             <td className="px-3 py-2.5 text-slate-600">{x.dsnv?.cccd || ''}</td>
                                             <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{formatDateVN(x.dsnv?.ngay_sinh)}</td>
                                             <td className="px-3 py-2.5 text-center font-bold">{(x.dsnv?.gioi_tinh || '').toLowerCase() === 'nữ' ? 'X' : ''}</td>
                                             <td className="px-3 py-2.5 text-slate-600">{[x.xa_phuong, x.tinh].filter(Boolean).join(', ')}</td>
                                             <td className="px-3 py-2.5 text-slate-700">{x.noi_kcb || ''}</td>
                                             <td className="px-3 py-2.5 text-slate-600">{x.so_dien_thoai || x.dsnv?.dien_thoai || ''}</td>
-                                            <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap text-xs">{formatDateVN(x.sd_tu_ngay)}{(x.sd_tu_ngay || x.sd_den_ngay) && ' → '}{formatDateVN(x.sd_den_ngay)}</td>
+                                            <td className="px-3 py-2.5 whitespace-nowrap">
+                                                <div className="font-medium text-blue-700">{x.ma_so_bhxh || '---'}</div>
+                                                <div className="text-xs text-slate-500">{formatDateVN(x.sd_tu_ngay)}{(x.sd_tu_ngay || x.sd_den_ngay) && ' → '}{formatDateVN(x.sd_den_ngay)}</div>
+                                            </td>
                                             <td className="px-3 py-2.5"><LoaiBadge loai={effectiveLoai(x)} /></td>
                                             <td className="px-3 py-2.5">{actionBtns(x)}</td>
                                         </tr>
