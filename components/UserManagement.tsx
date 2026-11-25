@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { SystemUser } from '../types';
 import { getUsers, createUser, updateUser, deleteUser } from '../services/userService';
-import { Plus, Edit, Trash2, X, Save, Shield, User, Key, Download, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Save, Shield, User, Key, Download, Upload, Lock, Unlock } from 'lucide-react';
+import { getAuthUser } from '../services/authService';
 import * as XLSX from 'xlsx';
 
 export const UserManagement = () => {
@@ -10,6 +11,7 @@ export const UserManagement = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<Partial<SystemUser>>({});
     const [error, setError] = useState('');
+    const currentUserId = getAuthUser()?.id;
 
     useEffect(() => {
         fetchUsers();
@@ -50,6 +52,30 @@ export const UserManagement = () => {
         }
     };
 
+    /** Khóa / mở tài khoản: tài khoản bị khóa không đăng nhập được, phiên đang mở sẽ tự đăng xuất */
+    const handleToggleLock = async (user: SystemUser) => {
+        if (user.id === currentUserId) {
+            alert('Không thể khóa tài khoản đang đăng nhập.');
+            return;
+        }
+        const lock = !user.is_locked;
+        const msg = lock
+            ? `Khóa tài khoản "${user.username}" (${user.full_name})?
+Người này sẽ không đăng nhập được cho đến khi được mở lại.`
+            : `Mở khóa tài khoản "${user.username}" (${user.full_name})?`;
+        if (!window.confirm(msg)) return;
+        try {
+            await updateUser(user.id, { is_locked: lock });
+            setUsers(prev => prev.map(u => (u.id === user.id ? { ...u, is_locked: lock } : u)));
+        } catch (err: any) {
+            console.error('Toggle lock failed', err);
+            const missing = /is_locked/.test(err?.message || '');
+            alert(missing
+                ? 'Chưa có cột khóa tài khoản trong cơ sở dữ liệu. Hãy chạy file add_user_lock.sql trong Supabase SQL Editor.'
+                : `${lock ? 'Khóa' : 'Mở khóa'} thất bại: ${err?.message || ''}`);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -83,6 +109,7 @@ export const UserManagement = () => {
             'Họ và tên': user.full_name,
             'Tên đăng nhập': user.username,
             'Vai trò': user.role === 'admin' ? 'Quản trị viên' : user.role === 'manager' ? 'Quản lý' : 'Nhân viên',
+            'Trạng thái': user.is_locked ? 'Đã khóa' : 'Hoạt động',
             'Ngày tạo': new Date(user.created_at || '').toLocaleDateString('vi-VN')
         }));
 
@@ -192,13 +219,14 @@ export const UserManagement = () => {
                             <th className="px-6 py-4">Họ và tên</th>
                             <th className="px-6 py-4">Tên đăng nhập</th>
                             <th className="px-6 py-4">Vai trò</th>
+                            <th className="px-6 py-4">Trạng thái</th>
                             <th className="px-6 py-4 text-center">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {users.map((user) => (
-                            <tr key={user.id} className="hover:bg-slate-50">
-                                <td className="px-6 py-4 font-medium text-slate-900">{user.full_name}</td>
+                            <tr key={user.id} className={user.is_locked ? 'bg-slate-50/80 text-slate-400' : 'hover:bg-slate-50'}>
+                                <td className={`px-6 py-4 font-medium ${user.is_locked ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{user.full_name}</td>
                                 <td className="px-6 py-4 text-slate-600">{user.username}</td>
                                 <td className="px-6 py-4">
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
@@ -210,8 +238,27 @@ export const UserManagement = () => {
                                             user.role === 'manager' ? 'Quản lý' : 'Nhân viên'}
                                     </span>
                                 </td>
+                                <td className="px-6 py-4">
+                                    {user.is_locked ? (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+                                            <Lock size={12} /> Đã khóa
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200">
+                                            Hoạt động
+                                        </span>
+                                    )}
+                                </td>
                                 <td className="px-6 py-4 text-center">
                                     <div className="flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={() => handleToggleLock(user)}
+                                            disabled={user.id === currentUserId}
+                                            className={`p-2 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed ${user.is_locked ? 'text-red-600 hover:text-emerald-600 hover:bg-emerald-50' : 'text-slate-600 hover:text-amber-600 hover:bg-amber-50'}`}
+                                            title={user.id === currentUserId ? 'Không thể khóa tài khoản đang đăng nhập' : user.is_locked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                                        >
+                                            {user.is_locked ? <Unlock size={16} /> : <Lock size={16} />}
+                                        </button>
                                         <button
                                             onClick={() => handleEdit(user)}
                                             className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
@@ -232,7 +279,7 @@ export const UserManagement = () => {
                         ))}
                         {users.length === 0 && !loading && (
                             <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
+                                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
                                     Chưa có người dùng nào.
                                 </td>
                             </tr>

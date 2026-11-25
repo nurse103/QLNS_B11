@@ -57,7 +57,7 @@ import { NCKHModule } from './components/NCKHModule';
 import { usePermissions } from './hooks/usePermissions';
 import { Login } from './components/Login';
 import { Settings as SettingsPage } from './components/Settings';
-import { User as AuthUser, getCurrentUser } from './services/authService';
+import { User as AuthUser, getCurrentUser, checkUserLocked } from './services/authService';
 import { getPermissionsByRole, Permission } from './services/permissionService';
 import { getMenuOrder } from './services/settingsService';
 
@@ -658,6 +658,21 @@ function App() {
     localStorage.removeItem('user');
     setUserMenuOpen(false);
   };
+
+  // Tài khoản bị khóa trong lúc đang đăng nhập → tự đăng xuất (kiểm tra khi mở app và khi quay lại tab)
+  useEffect(() => {
+    if (!user?.id) return;
+    const check = async () => {
+      if (await checkUserLocked(user.id)) {
+        handleLogout();
+        alert('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
+      }
+    };
+    check();
+    const onFocus = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onFocus);
+    return () => document.removeEventListener('visibilitychange', onFocus);
+  }, [user?.id]);
 
   if (!user) {
     return <Login onLogin={handleLogin} />;

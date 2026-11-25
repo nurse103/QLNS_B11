@@ -17,6 +17,8 @@ export const login = async (username: string, password: string): Promise<User | 
             .rpc('login_user', { p_username: username, p_password: password });
 
         if (error) {
+            // Đúng mật khẩu nhưng tài khoản bị khóa (xem add_user_lock.sql)
+            if ((error.message || '').includes('ACCOUNT_LOCKED')) throw new Error('ACCOUNT_LOCKED');
             console.error("Login error:", error);
             return null;
         }
@@ -29,9 +31,24 @@ export const login = async (username: string, password: string): Promise<User | 
         }
 
         return null;
-    } catch (err) {
+    } catch (err: any) {
+        if (err?.message === 'ACCOUNT_LOCKED') throw err;
         console.error("Login exception:", err);
         return null;
+    }
+};
+
+/**
+ * Tài khoản đang đăng nhập đã bị khóa (hoặc bị xóa) chưa?
+ * Trả về false nếu chưa chạy add_user_lock.sql hoặc lỗi mạng, để không đẩy người dùng ra nhầm.
+ */
+export const checkUserLocked = async (id: string): Promise<boolean> => {
+    try {
+        const { data, error } = await supabase.rpc('is_user_locked', { p_id: id });
+        if (error) return false;
+        return data === true;
+    } catch {
+        return false;
     }
 };
 

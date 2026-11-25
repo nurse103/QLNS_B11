@@ -33,8 +33,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             } else {
                 setError('Tên đăng nhập hoặc mật khẩu không đúng');
             }
-        } catch (err) {
-            setError('Có lỗi xảy ra, vui lòng thử lại');
+        } catch (err: any) {
+            setError(err?.message === 'ACCOUNT_LOCKED'
+                ? 'Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.'
+                : 'Có lỗi xảy ra, vui lòng thử lại');
         } finally {
             setLoading(false);
         }

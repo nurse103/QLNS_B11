@@ -81,6 +81,8 @@ export interface SystemUser {
   username: string;
   password?: string; // Optional for display, required for creation
   role: 'user' | 'admin' | 'manager'; // Assuming roles based on user_role enum
+  /** Tài khoản bị khóa: không đăng nhập được */
+  is_locked?: boolean;
   created_at?: string;
   updated_at?: string;
 }
