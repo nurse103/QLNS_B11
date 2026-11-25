@@ -50,6 +50,8 @@ export const InsuranceModule = () => {
     const authUser = useMemo(() => getAuthUser(), []);
     /** Tài khoản "Nhân viên" chỉ xem BHYT của chính mình và thân nhân mình; quản trị viên, quản lý xem tất cả */
     const restricted = !!authUser && authUser.role !== 'admin' && authUser.role !== 'manager';
+    /** Nhập Excel, xuất mẫu, sao chép từ năm trước: chỉ quản trị viên */
+    const isAdmin = authUser?.role === 'admin';
     const [tab, setTab] = useState<Tab>('ca_nhan');
     const [showTraCuuHelp, setShowTraCuuHelp] = useState(false);
     const bookmarkletRef = useRef<HTMLAnchorElement>(null);
@@ -346,7 +348,7 @@ export const InsuranceModule = () => {
     const actionBtns = (item: BhytCaNhan | BhytThanNhan) => (
         <div className="flex items-center justify-center gap-1">
             <button onClick={() => kiemTraHanThe(item)} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded" title="Kiểm tra hạn thẻ trên Cổng BHXH (tự điền mã thẻ, họ tên, ngày sinh)"><ShieldCheck size={16} /></button>
-            <button onClick={() => setExportIds([item.id!])} className="p-1.5 text-green-700 hover:bg-green-50 rounded" title="Xuất mẫu cho người này"><FileText size={16} /></button>
+            {isAdmin && <button onClick={() => setExportIds([item.id!])} className="p-1.5 text-green-700 hover:bg-green-50 rounded" title="Xuất mẫu cho người này"><FileText size={16} /></button>}
             {can_edit && <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Sửa"><Edit size={16} /></button>}
             {can_delete && <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xóa"><Trash2 size={16} /></button>}
         </div>
@@ -396,12 +398,12 @@ export const InsuranceModule = () => {
                             placeholder={tab === 'ca_nhan' ? 'Tìm tên, mã BHXH, CCCD...' : 'Tìm tên thân nhân, quân nhân, mã số...'}
                             className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#009900] shadow-sm" />
                     </div>
-                    {can_add && !restricted && (
+                    {isAdmin && (
                         <button onClick={handleCopyFromPrevYear} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap" title={`Sao chép danh sách năm ${nam - 1} sang năm ${nam}`}>
                             <Copy size={16} /> Từ năm {nam - 1}
                         </button>
                     )}
-                    {can_add && !restricted && (
+                    {isAdmin && (
                         <>
                             <button onClick={() => importInputRef.current?.click()} disabled={importing}
                                 className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2 shadow-sm whitespace-nowrap disabled:opacity-50"
@@ -411,15 +413,17 @@ export const InsuranceModule = () => {
                             <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
                         </>
                     )}
-                    <button onClick={() => openTraCuuBhyt()} className="px-4 py-2 bg-white text-teal-700 border border-teal-200 rounded-lg text-sm font-medium hover:bg-teal-50 flex items-center gap-2 shadow-sm whitespace-nowrap" title="Tra cứu thời hạn sử dụng thẻ BHYT trên Cổng BHXH Việt Nam">
+                    <button onClick={() => openTraCuuBhyt()} className="px-4 py-2 bg-orange-500 text-white border border-orange-500 rounded-lg text-sm font-medium hover:bg-orange-600 flex items-center gap-2 shadow-sm whitespace-nowrap" title="Tra cứu thời hạn sử dụng thẻ BHYT trên Cổng BHXH Việt Nam">
                         <ExternalLink size={16} /> Tra cứu hạn thẻ
                     </button>
                     <button onClick={() => setShowTraCuuHelp(true)} className="px-2 py-2 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm" title="Cài đặt tự điền khi kiểm tra hạn thẻ">
                         <HelpCircle size={16} />
                     </button>
+                    {isAdmin && (
                     <button onClick={() => setExportIds(Array.from(selected))} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap">
                         <FileDown size={16} className="text-green-700" /> Xuất mẫu{selected.size ? ` (${selected.size} người)` : ''}
                     </button>
+                    )}
                     {can_add && (
                         <button onClick={openAdd} className="px-4 py-2 bg-[#009900] text-white rounded-lg text-sm font-medium hover:bg-[#007700] flex items-center gap-2 shadow-md whitespace-nowrap">
                             <Plus size={16} /> Thêm mới
