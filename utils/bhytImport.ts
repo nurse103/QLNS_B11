@@ -60,14 +60,30 @@ export interface ImportResult<T> {
     records: T[];
     /** Tên quân nhân trong file không tìm thấy trong danh sách nhân viên */
     unmatched: string[];
+    /** Tên trong file khớp với nhân viên chỉ khi bỏ dấu (VD "Nguyên Danh Độ" → "Nguyễn Danh Độ") */
+    approx: { fileName: string; empName: string }[];
 }
 
+/** Bỏ dấu tiếng Việt: "Nguyễn Danh Độ" → "nguyen danh do" */
+const unaccent = (s: any) =>
+    normName(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+
+const pickByDob = (list: Employee[], ngaySinh?: string | null) =>
+    list.length <= 1 ? list[0] : list.find(e => ngaySinh && e.ngay_sinh === ngaySinh) || list[0];
+
+/**
+ * Tìm nhân viên theo tên:
+ *  1. Khớp đúng (không phân biệt hoa/thường, khoảng trắng)
+ *  2. Không có → khớp khi bỏ dấu, chỉ nhận nếu đúng 1 người (tránh ghép nhầm)
+ */
 const findEmployee = (employees: Employee[], name: any, ngaySinh?: string | null) => {
     const key = normName(name);
-    if (!key) return undefined;
-    const list = employees.filter(e => normName(e.ho_va_ten) === key);
-    if (list.length <= 1) return list[0];
-    return list.find(e => ngaySinh && e.ngay_sinh === ngaySinh) || list[0];
+    if (!key) return { emp: undefined, approx: false };
+    const exact = employees.filter(e => normName(e.ho_va_ten) === key);
+    if (exact.length) return { emp: pickByDob(exact, ngaySinh), approx: false };
+    const loose = employees.filter(e => unaccent(e.ho_va_ten) === unaccent(name));
+    if (loose.length === 1) return { emp: loose[0], approx: true };
+    return { emp: undefined, approx: false };
 };
 
 const readRows = async (file: File) => {
@@ -148,6 +164,14 @@ export const parseBhytFile = async (
     }
     const nam = namInFile || fallbackNam;
     const unmatched = new Set<string>();
+    const approx = new Map<string, string>();
+    /** Tìm nhân viên, ghi lại các tên chỉ khớp khi bỏ dấu */
+    const find = (name: any, ngaySinh?: string | null) => {
+        const { emp, approx: loose } = findEmployee(employees, name, ngaySinh);
+        if (emp && loose) approx.set(str(name)!, emp.ho_va_ten);
+        return emp;
+    };
+    const approxList = () => [...approx].map(([fileName, empName]) => ({ fileName, empName }));
     const note = (r: any[], extra?: string | null) =>
         [ghiChuCol >= 0 ? str(r[ghiChuCol]) : null, extra].filter(Boolean).join('; ') || null;
 
@@ -156,7 +180,7 @@ export const parseBhytFile = async (
         const records: BhytCaNhan[] = [];
         const flat = !eachDataRow(rows, headerRow, 1, (r, loai) => {
             const ns = parseDate(r[5]).date;
-            const emp = findEmployee(employees, r[1], ns);
+            const emp = find(r[1], ns);
             if (!emp) { unmatched.add(str(r[1])!); return; }
             const den = parseDate(r[12]).date;
             records.push({
@@ -168,7 +192,7 @@ export const parseBhytFile = async (
                 ghi_chu: note(r),
             });
         });
-        return { type: 'ca_nhan', nam, flat, records, unmatched: [...unmatched] };
+        return { type: 'ca_nhan', nam, flat, records, unmatched: [...unmatched], approx: approxList() };
     }
 
     // A TT | B QN họ tên | C CB | D Quan hệ | E Họ tên | F CCCD | G Mã số | H Ngày sinh | I Nữ | J Xã | K Tỉnh | L Nơi KCB | M SĐT | N Từ | O Đến | (Ghi chú)
@@ -178,7 +202,7 @@ export const parseBhytFile = async (
     const flat = !eachDataRow(rows, headerRow, 4, (r, loai) => {
         if (loai !== lastLoai) { currentQn = ''; lastLoai = loai; }
         if (str(r[1])) currentQn = r[1]; // mẫu chính thức chỉ ghi tên quân nhân ở dòng đầu nhóm
-        const emp = findEmployee(employees, currentQn);
+        const emp = find(currentQn);
         if (!emp) {
             unmatched.add(str(currentQn) || `(không rõ quân nhân) – ${str(r[4])}`);
             return;
@@ -199,5 +223,5 @@ export const parseBhytFile = async (
             ghi_chu: note(r, ns.year ? `Năm sinh: ${ns.year}` : null),
         });
     });
-    return { type: 'than_nhan', nam, flat, records, unmatched: [...unmatched] };
+    return { type: 'than_nhan', nam, flat, records, unmatched: [...unmatched], approx: approxList() };
 };

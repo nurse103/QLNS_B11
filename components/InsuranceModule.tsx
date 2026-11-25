@@ -193,49 +193,51 @@ export const InsuranceModule = () => {
         try {
             const result = await parseBhytFile(file, tab, employees, nam);
             const targetNam = result.nam || nam;
-            const keyOf = (x: any) => isCN ? `${x.dsnv_id}` : thanNhanKey(x);
-            const existing = new Map<string, any>(
-                (isCN ? caNhan : thanNhan).filter(x => x.nam === targetNam).map(x => [keyOf(x), x]));
+            // Cùng một người? Cá nhân: cùng nhân viên. Thân nhân: cùng quân nhân + cùng họ tên,
+            // và ngày sinh trùng nhau (hoặc một bên chưa có ngày sinh).
+            const norm = (s: any) => String(s ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
+            const samePerson = (a: any, b: any) => isCN
+                ? a.dsnv_id === b.dsnv_id
+                : a.dsnv_id === b.dsnv_id && norm(a.ho_va_ten) === norm(b.ho_va_ten)
+                    && (!a.ngay_sinh || !b.ngay_sinh || a.ngay_sinh === b.ngay_sinh);
+            const existing = (isCN ? caNhan : thanNhan).filter(x => x.nam === targetNam) as any[];
 
+            // Chỉ thêm người chưa có; người đã có trong năm thì bỏ qua, không ghi đè
             const toCreate: any[] = [];
-            const toUpdate: { id: number; data: any }[] = [];
-            const seen = new Set<string>();
+            let skipped = 0;
             for (const rec of result.records as any[]) {
-                const k = keyOf(rec);
-                if (seen.has(k)) continue; // trùng trong file: lấy dòng đầu
-                seen.add(k);
-                const old = existing.get(k);
-                if (old) {
-                    // Ô trống trong file thì giữ nguyên giá trị đang có
-                    const data = Object.fromEntries(Object.entries(rec).filter(([, v]) => v !== null && v !== ''));
-                    toUpdate.push({ id: old.id, data });
-                } else {
-                    toCreate.push(rec);
+                if (existing.some(x => samePerson(x, rec)) || toCreate.some(x => samePerson(x, rec))) {
+                    skipped++;
+                    continue;
                 }
+                toCreate.push(rec);
             }
 
             const lines = [
                 `File: ${isCN ? 'Mẫu 04b - BHYT cá nhân' : 'Mẫu 04a - BHYT thân nhân'}, năm ${targetNam}`,
                 `• Thêm mới: ${toCreate.length}`,
-                `• Cập nhật (đã có trong năm ${targetNam}): ${toUpdate.length}`,
+                `• Bỏ qua (đã có trong năm ${targetNam} hoặc trùng trong file): ${skipped}`,
             ];
+            if (result.approx.length) {
+                lines.push(`• ${result.approx.length} tên trong file khác dấu, đã ghép theo danh sách nhân viên:`);
+                lines.push(...result.approx.slice(0, 15).map(a => `   - "${a.fileName}" → ${a.empName}`));
+            }
             if (result.unmatched.length) {
                 lines.push(`• Bỏ qua ${result.unmatched.length} người không tìm thấy trong danh sách nhân viên:`);
                 lines.push(...result.unmatched.slice(0, 15).map(n => `   - ${n}`));
                 if (result.unmatched.length > 15) lines.push(`   ... và ${result.unmatched.length - 15} người khác`);
             }
-            if (toCreate.length + toUpdate.length === 0) {
-                alert(lines.join('\n') + '\n\nKhông có dòng nào để nhập.');
+            if (toCreate.length === 0) {
+                alert(lines.join('\n') + '\n\nKhông có người mới nào để thêm.');
                 return;
             }
             if (!window.confirm(lines.join('\n') + '\n\nTiếp tục nhập?')) return;
 
             const api: any = isCN ? bhytCaNhanApi : bhytThanNhanApi;
-            if (toCreate.length) await api.bulkCreate(toCreate);
-            for (const u of toUpdate) await api.update(u.id, u.data);
+            await api.bulkCreate(toCreate);
             if (targetNam !== nam) setNam(targetNam);
             await fetchData();
-            alert(`Đã nhập xong: ${toCreate.length} thêm mới, ${toUpdate.length} cập nhật.`);
+            alert(`Đã nhập xong: thêm mới ${toCreate.length}, bỏ qua ${skipped} đã có.`);
         } catch (err: any) {
             console.error(err);
             alert('Nhập Excel thất bại: ' + (err?.message || ''));
