@@ -15,6 +15,33 @@ export const LOAI_DE_NGHI_SHORT: Record<LoaiDeNghi, string> = {
     VII: 'Cấp mới, tăng mới',
 };
 
+/** Mục chọn tay (không tự xếp theo hạn sử dụng) */
+export const MANUAL_LOAI: LoaiDeNghi[] = ['III', 'IV', 'V', 'VI'];
+
+/**
+ * Tự xếp mục theo hạn sử dụng (HSD đến) so với năm đề nghị:
+ *  - HSD đến năm đề nghị trở về sau  → I   (còn giá trị sử dụng trong năm)
+ *  - HSD hết trong năm trước          → II  (gia hạn)
+ *  - HSD hết trước đó / chưa có thẻ   → VII (cấp mới, tăng mới)
+ */
+export const autoLoai = (sdDenNgay: string | null | undefined, nam: number): LoaiDeNghi => {
+    const y = sdDenNgay ? Number(String(sdDenNgay).slice(0, 4)) : NaN;
+    if (!y) return 'VII';
+    if (y >= nam) return 'I';
+    if (y === nam - 1) return 'II';
+    return 'VII';
+};
+
+/** Mục thực tế của bản ghi: III–VI giữ theo lựa chọn, còn lại xếp theo HSD */
+export const effectiveLoai = (x: { loai_de_nghi?: string | null; sd_den_ngay?: string | null; nam: number }): LoaiDeNghi =>
+    MANUAL_LOAI.includes(x.loai_de_nghi as LoaiDeNghi) ? x.loai_de_nghi as LoaiDeNghi : autoLoai(x.sd_den_ngay, x.nam);
+
+const norm = (s: any) => String(s ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** Khóa nhận diện 1 thân nhân của 1 quân nhân (cùng tên khác người → phân biệt bằng ngày sinh/quan hệ) */
+export const thanNhanKey = (x: { dsnv_id: number; ho_va_ten?: string | null; ngay_sinh?: string | null; moi_quan_he?: string | null }) =>
+    `${x.dsnv_id}|${norm(x.ho_va_ten)}|${x.ngay_sinh || norm(x.moi_quan_he)}`;
+
 /** Tiêu đề từng mục khi xuất mẫu. who = 'quân nhân' | 'thân nhân' */
 export const loaiDeNghiTitle = (loai: LoaiDeNghi, nam: number, type: 'ca_nhan' | 'than_nhan') => {
     const prev = nam - 1;

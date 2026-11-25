@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HeartPulse, Users, User, Plus, Search, Edit, Trash2, X, Save, FileSpreadsheet, Copy, Upload } from 'lucide-react';
-import { parseBhytFile, normName } from '../utils/bhytImport';
+import { parseBhytFile } from '../utils/bhytImport';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { getFamilyRecords, FamilyRecord } from '../services/familyService';
 import {
     bhytCaNhanApi, bhytThanNhanApi, BhytCaNhan, BhytThanNhan,
-    LOAI_DE_NGHI, LOAI_DE_NGHI_SHORT, LoaiDeNghi,
+    LOAI_DE_NGHI, LOAI_DE_NGHI_SHORT, LoaiDeNghi, MANUAL_LOAI, autoLoai, effectiveLoai, thanNhanKey,
 } from '../services/bhytService';
 import { exportMau04a, exportMau04b, formatDateVN } from '../utils/bhytExport';
 import { usePermissions } from '../hooks/usePermissions';
@@ -101,26 +101,27 @@ export const InsuranceModule = () => {
     const thanNhanYear = thanNhan.filter(x => x.nam === nam);
 
     const caNhanView = caNhanYear
-        .filter(x => !loaiFilter || x.loai_de_nghi === loaiFilter)
+        .filter(x => !loaiFilter || effectiveLoai(x) === loaiFilter)
         .filter(x => matches([x.dsnv?.ho_va_ten, x.ma_so_bhxh, x.dsnv?.cccd, x.noi_kcb]))
-        .sort((a, b) => LOAI_DE_NGHI.indexOf(a.loai_de_nghi) - LOAI_DE_NGHI.indexOf(b.loai_de_nghi)
+        .sort((a, b) => LOAI_DE_NGHI.indexOf(effectiveLoai(a)) - LOAI_DE_NGHI.indexOf(effectiveLoai(b))
             || (a.dsnv?.ho_va_ten || '').localeCompare(b.dsnv?.ho_va_ten || '', 'vi'));
 
     const thanNhanView = thanNhanYear
-        .filter(x => !loaiFilter || x.loai_de_nghi === loaiFilter)
+        .filter(x => !loaiFilter || effectiveLoai(x) === loaiFilter)
         .filter(x => matches([x.ho_va_ten, x.dsnv?.ho_va_ten, x.ma_so_bhyt, x.cccd, x.noi_kcb, x.moi_quan_he]))
-        .sort((a, b) => LOAI_DE_NGHI.indexOf(a.loai_de_nghi) - LOAI_DE_NGHI.indexOf(b.loai_de_nghi)
+        .sort((a, b) => LOAI_DE_NGHI.indexOf(effectiveLoai(a)) - LOAI_DE_NGHI.indexOf(effectiveLoai(b))
             || (a.dsnv?.ho_va_ten || '').localeCompare(b.dsnv?.ho_va_ten || '', 'vi')
             || (a.id || 0) - (b.id || 0));
 
     // ===== Actions =====
     const openAdd = () => {
-        setForm({ nam, loai_de_nghi: 'I' });
+        setForm({ nam, loai_de_nghi: 'AUTO' });
         setModalOpen(true);
     };
 
     const openEdit = (item: BhytCaNhan | BhytThanNhan) => {
-        setForm({ ...item });
+        // Mục I/II/VII là mục tự xếp theo hạn sử dụng
+        setForm({ ...item, loai_de_nghi: MANUAL_LOAI.includes(item.loai_de_nghi) ? item.loai_de_nghi : 'AUTO' });
         setModalOpen(true);
     };
 
@@ -141,6 +142,7 @@ export const InsuranceModule = () => {
         try {
             const api: any = tab === 'ca_nhan' ? bhytCaNhanApi : bhytThanNhanApi;
             const payload = { ...form, nam: Number(form.nam), dsnv_id: Number(form.dsnv_id) };
+            if (!MANUAL_LOAI.includes(payload.loai_de_nghi)) payload.loai_de_nghi = autoLoai(payload.sd_den_ngay, payload.nam);
             if (tab === 'than_nhan' && !payload.gia_dinh_id) payload.gia_dinh_id = null;
             if (form.id) await api.update(form.id, payload);
             else await api.create(payload);
@@ -159,17 +161,17 @@ export const InsuranceModule = () => {
     const handleCopyFromPrevYear = async () => {
         const prev = nam - 1;
         const isCN = tab === 'ca_nhan';
-        const src: any[] = (isCN ? caNhan : thanNhan).filter(x => x.nam === prev && x.loai_de_nghi !== 'VI');
-        const existing = new Set((isCN ? caNhanYear : thanNhanYear).map((x: any) =>
-            isCN ? `${x.dsnv_id}` : `${x.dsnv_id}|${(x.ho_va_ten || '').toLowerCase()}`));
-        const toCopy = src.filter(x => !existing.has(isCN ? `${x.dsnv_id}` : `${x.dsnv_id}|${(x.ho_va_ten || '').toLowerCase()}`));
+        const keyOf = (x: any) => isCN ? `${x.dsnv_id}` : thanNhanKey(x);
+        const src: any[] = (isCN ? caNhan : thanNhan).filter(x => x.nam === prev && effectiveLoai(x) !== 'VI');
+        const existing = new Set((isCN ? caNhanYear : thanNhanYear).map(keyOf));
+        const toCopy = src.filter(x => !existing.has(keyOf(x)));
         if (toCopy.length === 0) {
             alert(`Không có bản ghi nào của năm ${prev} cần sao chép sang năm ${nam}.`);
             return;
         }
-        if (!window.confirm(`Sao chép ${toCopy.length} bản ghi từ năm ${prev} sang năm ${nam}?\nCác bản ghi mới sẽ được xếp vào mục "II. Gia hạn", bạn có thể sửa lại sau.`)) return;
+        if (!window.confirm(`Sao chép ${toCopy.length} bản ghi từ năm ${prev} sang năm ${nam}?\nCác bản ghi mới được tự xếp mục theo hạn sử dụng thẻ.`)) return;
         try {
-            const rows = toCopy.map(({ id, created_at, created_by, dsnv, ...rest }) => ({ ...rest, nam, loai_de_nghi: 'II' }));
+            const rows = toCopy.map(({ id, created_at, created_by, dsnv, ...rest }) => ({ ...rest, nam, loai_de_nghi: autoLoai(rest.sd_den_ngay, nam) }));
             await (isCN ? bhytCaNhanApi : bhytThanNhanApi).bulkCreate(rows);
             fetchData();
         } catch (err: any) {
@@ -191,7 +193,7 @@ export const InsuranceModule = () => {
         try {
             const result = await parseBhytFile(file, tab, employees, nam);
             const targetNam = result.nam || nam;
-            const keyOf = (x: any) => isCN ? `${x.dsnv_id}` : `${x.dsnv_id}|${normName(x.ho_va_ten)}`;
+            const keyOf = (x: any) => isCN ? `${x.dsnv_id}` : thanNhanKey(x);
             const existing = new Map<string, any>(
                 (isCN ? caNhan : thanNhan).filter(x => x.nam === targetNam).map(x => [keyOf(x), x]));
 
@@ -266,8 +268,8 @@ export const InsuranceModule = () => {
 
     const selectedEmp = form.dsnv_id ? empById.get(Number(form.dsnv_id)) : undefined;
 
-    const counts = (list: { loai_de_nghi: LoaiDeNghi }[]) =>
-        LOAI_DE_NGHI.map(l => ({ l, n: list.filter(x => x.loai_de_nghi === l).length }));
+    const counts = (list: (BhytCaNhan | BhytThanNhan)[]) =>
+        LOAI_DE_NGHI.map(l => ({ l, n: list.filter(x => effectiveLoai(x) === l).length }));
     const yearList = tab === 'ca_nhan' ? caNhanYear : thanNhanYear;
 
     const actionBtns = (item: BhytCaNhan | BhytThanNhan) => (
@@ -332,6 +334,10 @@ export const InsuranceModule = () => {
                 ))}
             </div>
 
+            <p className="text-xs text-slate-500 -mt-2">
+                Mục I, II, VII tự xếp theo hạn sử dụng thẻ (HSD đến): còn hạn năm {nam} trở đi → I; hết hạn năm {nam - 1} → II; hết hạn trước đó hoặc chưa có thẻ → VII. Mục III–VI chọn khi sửa từng người.
+            </p>
+
             {/* Toolbar */}
             <div className="flex flex-wrap gap-2">
                 <div className="relative flex-1 min-w-[200px] md:max-w-sm">
@@ -380,7 +386,7 @@ export const InsuranceModule = () => {
                                             </div>
                                             {actionBtns(x)}
                                         </div>
-                                        <LoaiBadge loai={x.loai_de_nghi} />
+                                        <LoaiBadge loai={effectiveLoai(x)} />
                                         <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
                                             <div>Mã BHXH: <b className="text-blue-700">{x.ma_so_bhxh || '---'}</b></div>
                                             <div>CCCD: {x.dsnv?.cccd || '---'}</div>
@@ -429,7 +435,7 @@ export const InsuranceModule = () => {
                                             <td className="px-3 py-2.5 text-slate-700">{x.noi_kcb || ''}</td>
                                             <td className="px-3 py-2.5 text-slate-600">{x.so_dien_thoai || x.dsnv?.dien_thoai || ''}</td>
                                             <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap text-xs">{formatDateVN(x.sd_tu_ngay)}{(x.sd_tu_ngay || x.sd_den_ngay) && ' → '}{formatDateVN(x.sd_den_ngay)}</td>
-                                            <td className="px-3 py-2.5"><LoaiBadge loai={x.loai_de_nghi} /></td>
+                                            <td className="px-3 py-2.5"><LoaiBadge loai={effectiveLoai(x)} /></td>
                                             <td className="px-3 py-2.5">{actionBtns(x)}</td>
                                         </tr>
                                     ))}
@@ -455,7 +461,7 @@ export const InsuranceModule = () => {
                                             </div>
                                             {actionBtns(x)}
                                         </div>
-                                        <LoaiBadge loai={x.loai_de_nghi} />
+                                        <LoaiBadge loai={effectiveLoai(x)} />
                                         <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
                                             <div>Mã số: <b className="text-blue-700">{x.ma_so_bhyt || '---'}</b></div>
                                             <div>Sinh: {formatDateVN(x.ngay_sinh) || '---'}</div>
@@ -507,7 +513,7 @@ export const InsuranceModule = () => {
                                             <td className="px-3 py-2.5 text-slate-600">{[x.xa_phuong, x.tinh].filter(Boolean).join(', ')}</td>
                                             <td className="px-3 py-2.5 text-slate-700">{x.noi_kcb || ''}</td>
                                             <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap text-xs">{formatDateVN(x.sd_tu_ngay)}{(x.sd_tu_ngay || x.sd_den_ngay) && ' → '}{formatDateVN(x.sd_den_ngay)}</td>
-                                            <td className="px-3 py-2.5"><LoaiBadge loai={x.loai_de_nghi} /></td>
+                                            <td className="px-3 py-2.5"><LoaiBadge loai={effectiveLoai(x)} /></td>
                                             <td className="px-3 py-2.5">{actionBtns(x)}</td>
                                         </tr>
                                     ))}
@@ -540,8 +546,9 @@ export const InsuranceModule = () => {
                                     <input type="number" required value={form.nam || ''} onChange={e => setForm({ ...form, nam: e.target.value })} className={inputCls} />
                                 </Field>
                                 <Field label="Mục đề nghị *">
-                                    <select required value={form.loai_de_nghi || 'I'} onChange={e => setForm({ ...form, loai_de_nghi: e.target.value })} className={inputCls}>
-                                        {LOAI_DE_NGHI.map(l => <option key={l} value={l}>{l}. {LOAI_DE_NGHI_SHORT[l]}</option>)}
+                                    <select required value={form.loai_de_nghi || 'AUTO'} onChange={e => setForm({ ...form, loai_de_nghi: e.target.value })} className={inputCls}>
+                                        <option value="AUTO">Tự động theo hạn sử dụng ({(() => { const l = autoLoai(form.sd_den_ngay, Number(form.nam) || nam); return `${l}. ${LOAI_DE_NGHI_SHORT[l]}`; })()})</option>
+                                        {MANUAL_LOAI.map(l => <option key={l} value={l}>{l}. {LOAI_DE_NGHI_SHORT[l]}</option>)}
                                     </select>
                                 </Field>
                             </div>
