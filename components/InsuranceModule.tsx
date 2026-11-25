@@ -349,21 +349,55 @@ export const InsuranceModule = () => {
                 </div>
             </div>
 
-            {/* 2 thẻ */}
-            <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-full md:w-fit">
-                {([
-                    { id: 'ca_nhan', label: 'BHYT cá nhân', icon: User, n: caNhanYear.length },
-                    { id: 'than_nhan', label: 'BHYT thân nhân', icon: Users, n: thanNhanYear.length },
-                ] as const).map(t => (
-                    <button
-                        key={t.id}
-                        onClick={() => { setTab(t.id); setLoaiFilter(''); }}
-                        className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${tab === t.id ? 'bg-[#009900] text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}
-                    >
-                        <t.icon size={16} /> {t.label}
-                        <span className={`text-[11px] px-1.5 rounded-full ${tab === t.id ? 'bg-white/25' : 'bg-slate-100'}`}>{t.n}</span>
+            {/* 2 thẻ + thanh công cụ cùng một dòng */}
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+                <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-full lg:w-fit shrink-0">
+                    {([
+                        { id: 'ca_nhan', label: 'BHYT cá nhân', icon: User, n: caNhanYear.length },
+                        { id: 'than_nhan', label: 'BHYT thân nhân', icon: Users, n: thanNhanYear.length },
+                    ] as const).map(t => (
+                        <button
+                            key={t.id}
+                            onClick={() => { setTab(t.id); setLoaiFilter(''); }}
+                            className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors ${tab === t.id ? 'bg-[#009900] text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <t.icon size={16} /> {t.label}
+                            <span className={`text-[11px] px-1.5 rounded-full ${tab === t.id ? 'bg-white/25' : 'bg-slate-100'}`}>{t.n}</span>
+                        </button>
+                    ))}
+                </div>
+                {/* Toolbar */}
+                <div className="flex flex-wrap lg:flex-nowrap gap-2 flex-1 min-w-0 lg:justify-end">
+                    <div className="relative flex-1 min-w-[200px] lg:min-w-[140px] md:max-w-sm">
+                        <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                        <input value={search} onChange={e => setSearch(e.target.value)}
+                            placeholder={tab === 'ca_nhan' ? 'Tìm tên, mã BHXH, CCCD...' : 'Tìm tên thân nhân, quân nhân, mã số...'}
+                            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#009900] shadow-sm" />
+                    </div>
+                    {can_add && !restricted && (
+                        <button onClick={handleCopyFromPrevYear} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap" title={`Sao chép danh sách năm ${nam - 1} sang năm ${nam}`}>
+                            <Copy size={16} /> Từ năm {nam - 1}
+                        </button>
+                    )}
+                    {can_add && !restricted && (
+                        <>
+                            <button onClick={() => importInputRef.current?.click()} disabled={importing}
+                                className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2 shadow-sm whitespace-nowrap disabled:opacity-50"
+                                title={`Nhập từ file Excel theo ${tab === 'ca_nhan' ? 'Mẫu 04b' : 'Mẫu 04a'}`}>
+                                <Upload size={16} /> {importing ? 'Đang nhập...' : `Nhập Excel ${tab === 'ca_nhan' ? '04b' : '04a'}`}
+                            </button>
+                            <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
+                        </>
+                    )}
+                    <button onClick={() => setExportIds(Array.from(selected))} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap">
+                        <FileDown size={16} className="text-green-700" /> Xuất mẫu{selected.size ? ` (${selected.size} người)` : ''}
                     </button>
-                ))}
+                    {can_add && (
+                        <button onClick={openAdd} className="px-4 py-2 bg-[#009900] text-white rounded-lg text-sm font-medium hover:bg-[#007700] flex items-center gap-2 shadow-md whitespace-nowrap">
+                            <Plus size={16} /> Thêm mới
+                        </button>
+                    )}
+                </div>
             </div>
 
             {loadError && (
@@ -393,43 +427,6 @@ export const InsuranceModule = () => {
                 ))}
             </div>
 
-            <p className="text-xs text-slate-500 -mt-2">
-                Chọn "Tự động" thì mục xếp theo hạn sử dụng thẻ (HSD đến): còn hạn năm {nam} trở đi → I; hết hạn năm {nam - 1} → II; hết hạn trước đó hoặc chưa có thẻ → VII. Có thể chọn tay bất kỳ mục I–VII khi sửa từng người.
-                Tích chọn người rồi bấm <b>Xuất mẫu</b> để in Mẫu {tab === 'ca_nhan' ? '01A' : '01C / 04'}; lý do đề nghị lấy theo mục và ghi chú.
-            </p>
-
-            {/* Toolbar */}
-            <div className="flex flex-wrap gap-2">
-                <div className="relative flex-1 min-w-[200px] md:max-w-sm">
-                    <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                    <input value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder={tab === 'ca_nhan' ? 'Tìm tên, mã BHXH, CCCD...' : 'Tìm tên thân nhân, quân nhân, mã số...'}
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#009900] shadow-sm" />
-                </div>
-                {can_add && !restricted && (
-                    <button onClick={handleCopyFromPrevYear} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap" title={`Sao chép danh sách năm ${nam - 1} sang năm ${nam}`}>
-                        <Copy size={16} /> Từ năm {nam - 1}
-                    </button>
-                )}
-                {can_add && !restricted && (
-                    <>
-                        <button onClick={() => importInputRef.current?.click()} disabled={importing}
-                            className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2 shadow-sm whitespace-nowrap disabled:opacity-50"
-                            title={`Nhập từ file Excel theo ${tab === 'ca_nhan' ? 'Mẫu 04b' : 'Mẫu 04a'}`}>
-                            <Upload size={16} /> {importing ? 'Đang nhập...' : `Nhập Excel ${tab === 'ca_nhan' ? '04b' : '04a'}`}
-                        </button>
-                        <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
-                    </>
-                )}
-                <button onClick={() => setExportIds(Array.from(selected))} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap">
-                    <FileDown size={16} className="text-green-700" /> Xuất mẫu{selected.size ? ` (${selected.size} người)` : ''}
-                </button>
-                {can_add && (
-                    <button onClick={openAdd} className="px-4 py-2 bg-[#009900] text-white rounded-lg text-sm font-medium hover:bg-[#007700] flex items-center gap-2 shadow-md whitespace-nowrap">
-                        <Plus size={16} /> Thêm mới
-                    </button>
-                )}
-            </div>
 
             {/* ===== BHYT CÁ NHÂN ===== */}
             {tab === 'ca_nhan' && (
@@ -570,6 +567,7 @@ export const InsuranceModule = () => {
                                             <td className="px-3 py-2.5 whitespace-nowrap">
                                                 <div className="text-xs font-medium text-pink-600">{x.moi_quan_he || ''}</div>
                                                 <div className="font-semibold text-slate-800">{x.ho_va_ten}</div>
+                                                {x.so_dien_thoai && <div className="text-xs text-blue-600">{x.so_dien_thoai}</div>}
                                             </td>
                                             <td className="px-3 py-2.5 whitespace-nowrap">
                                                 <div className="text-slate-700">{formatDateVN(x.ngay_sinh) || '---'}</div>
