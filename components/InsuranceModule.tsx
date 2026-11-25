@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { HeartPulse, Users, User, Plus, Search, Edit, Trash2, X, Save, FileSpreadsheet, Copy, Upload, FileText, FileDown } from 'lucide-react';
+import { HeartPulse, Users, User, Plus, Search, Edit, Trash2, X, Save, FileSpreadsheet, Copy, Upload, FileText, FileDown, ExternalLink, ShieldCheck, HelpCircle } from 'lucide-react';
+
+
 import { parseBhytFile } from '../utils/bhytImport';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { getFamilyRecords, FamilyRecord } from '../services/familyService';
@@ -12,6 +14,7 @@ import { exportMau01A, exportMau01C, exportMau03A, exportMau04, mauGoiY } from '
 import { usePermissions } from '../hooks/usePermissions';
 import { getAuthUser } from '../services/authService';
 import { isOwnPersonnelRecord } from '../utils/ownershipUtils';
+import { openTraCuuBhyt, ngaySinhTraCuu, AUTOFILL_BOOKMARKLET } from '../utils/bhytTraCuu';
 
 type Tab = 'ca_nhan' | 'than_nhan';
 
@@ -48,6 +51,9 @@ export const InsuranceModule = () => {
     /** Tài khoản "Nhân viên" chỉ xem BHYT của chính mình và thân nhân mình; quản trị viên, quản lý xem tất cả */
     const restricted = !!authUser && authUser.role !== 'admin' && authUser.role !== 'manager';
     const [tab, setTab] = useState<Tab>('ca_nhan');
+    const [showTraCuuHelp, setShowTraCuuHelp] = useState(false);
+    const bookmarkletRef = useRef<HTMLAnchorElement>(null);
+    useEffect(() => { bookmarkletRef.current?.setAttribute('href', AUTOFILL_BOOKMARKLET); }, [showTraCuuHelp]);
     const [allCaNhan, setCaNhan] = useState<BhytCaNhan[]>([]);
     const [allThanNhan, setThanNhan] = useState<BhytThanNhan[]>([]);
     const [allEmployees, setEmployees] = useState<Employee[]>([]);
@@ -328,8 +334,18 @@ export const InsuranceModule = () => {
             .some(v => !String(v ?? '').trim());
     const RED = ' text-red-600 [&_*]:!text-red-600';
 
+    const kiemTraHanThe = (item: BhytCaNhan | BhytThanNhan) => {
+        const tn = 'moi_quan_he' in item;
+        openTraCuuBhyt({
+            maThe: String((tn ? (item as BhytThanNhan).ma_so_bhyt : (item as BhytCaNhan).ma_so_bhxh) ?? '').trim(),
+            hoTen: String((tn ? (item as BhytThanNhan).ho_va_ten : item.dsnv?.ho_va_ten) ?? '').trim(),
+            ngaySinh: ngaySinhTraCuu(tn ? (item as BhytThanNhan).ngay_sinh : item.dsnv?.ngay_sinh),
+        });
+    };
+
     const actionBtns = (item: BhytCaNhan | BhytThanNhan) => (
         <div className="flex items-center justify-center gap-1">
+            <button onClick={() => kiemTraHanThe(item)} className="p-1.5 text-teal-600 hover:bg-teal-50 rounded" title="Kiểm tra hạn thẻ trên Cổng BHXH (tự điền mã thẻ, họ tên, ngày sinh)"><ShieldCheck size={16} /></button>
             <button onClick={() => setExportIds([item.id!])} className="p-1.5 text-green-700 hover:bg-green-50 rounded" title="Xuất mẫu cho người này"><FileText size={16} /></button>
             {can_edit && <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Sửa"><Edit size={16} /></button>}
             {can_delete && <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xóa"><Trash2 size={16} /></button>}
@@ -395,6 +411,12 @@ export const InsuranceModule = () => {
                             <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
                         </>
                     )}
+                    <button onClick={() => openTraCuuBhyt()} className="px-4 py-2 bg-white text-teal-700 border border-teal-200 rounded-lg text-sm font-medium hover:bg-teal-50 flex items-center gap-2 shadow-sm whitespace-nowrap" title="Tra cứu thời hạn sử dụng thẻ BHYT trên Cổng BHXH Việt Nam">
+                        <ExternalLink size={16} /> Tra cứu hạn thẻ
+                    </button>
+                    <button onClick={() => setShowTraCuuHelp(true)} className="px-2 py-2 bg-white text-slate-500 border border-slate-200 rounded-lg hover:bg-slate-50 shadow-sm" title="Cài đặt tự điền khi kiểm tra hạn thẻ">
+                        <HelpCircle size={16} />
+                    </button>
                     <button onClick={() => setExportIds(Array.from(selected))} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap">
                         <FileDown size={16} className="text-green-700" /> Xuất mẫu{selected.size ? ` (${selected.size} người)` : ''}
                     </button>
@@ -477,7 +499,7 @@ export const InsuranceModule = () => {
                                         <th className="px-3 py-3">SĐT</th>
                                         <th className="px-3 py-3">Mã số BHXH / Giá trị thẻ</th>
                                         <th className="px-3 py-3">Mục</th>
-                                        <th className="px-3 py-3 text-center w-28">Thao tác</th>
+                                        <th className="px-3 py-3 text-center w-32">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -556,7 +578,7 @@ export const InsuranceModule = () => {
                                         <th className="px-3 py-3">Nơi KCB</th>
                                         <th className="px-3 py-3">Mã số / Giá trị thẻ</th>
                                         <th className="px-3 py-3">Mục</th>
-                                        <th className="px-3 py-3 text-center w-28">Thao tác</th>
+                                        <th className="px-3 py-3 text-center w-32">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -600,6 +622,27 @@ export const InsuranceModule = () => {
             )}
 
             {/* ===== Hộp thoại xuất mẫu ===== */}
+            {showTraCuuHelp && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setShowTraCuuHelp(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4 text-sm text-slate-700" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><ShieldCheck size={20} className="text-teal-600" /> Kiểm tra hạn thẻ BHYT</h3>
+                            <button onClick={() => setShowTraCuuHelp(false)} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
+                        </div>
+                        <p>Bấm nút <ShieldCheck size={14} className="inline text-teal-600" /> ở mỗi dòng: phần mềm mở trang tra cứu của BHXH trong cửa sổ nổi và chép sẵn mã thẻ vào bộ nhớ tạm. Trang BHXH không cho phần mềm khác điền trực tiếp, nên để <b>tự điền mã thẻ, họ tên, ngày sinh</b> cần cài 1 trong 2 cách sau (chỉ làm 1 lần trên mỗi máy):</p>
+                        <div className="p-3 rounded-xl bg-teal-50 border border-teal-100 space-y-1">
+                            <div className="font-semibold text-teal-800">Cách 1 – Tự động (khuyên dùng)</div>
+                            <p>Cài tiện ích <b>Tampermonkey</b> cho trình duyệt, sau đó bấm <a href={`${import.meta.env.BASE_URL}bhyt-tu-dien.user.js`} target="_blank" rel="noreferrer" className="text-blue-600 underline font-medium">cài script tự điền</a> → Install. Từ đó trang tra cứu mở ra là tự điền.</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                            <div className="font-semibold text-slate-800">Cách 2 – Dấu trang</div>
+                            <p>Kéo nút này lên thanh dấu trang: <a ref={bookmarkletRef} onClick={e => e.preventDefault()} className="inline-block px-2 py-0.5 rounded bg-teal-600 text-white font-medium cursor-move">Điền BHYT</a>. Khi cửa sổ tra cứu mở ra, bấm dấu trang này để điền.</p>
+                        </div>
+                        <p className="text-slate-500">Sau khi điền, bạn nhập <b>mã xác nhận</b> và bấm <b>Tra cứu</b>. Thông tin chỉ được gửi tới trang của BHXH, không đưa lên địa chỉ URL.</p>
+                    </div>
+                </div>
+            )}
+
             {exportIds && (() => {
                 const isCN = tab === 'ca_nhan';
                 const goiY = new Set(exportRecords.map(x => mauGoiY(tab, effectiveLoai(x))).filter(Boolean));
