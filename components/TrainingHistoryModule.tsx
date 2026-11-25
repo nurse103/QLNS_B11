@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getAuthUser } from '../services/authService';
+import { restrictToOwnPersonnel } from '../utils/ownershipUtils';
 import { getPersonnel } from '../services/personnelService';
 import { getTrainingRecords, createTrainingRecord, updateTrainingRecord, deleteTrainingRecord, TrainingRecord } from '../services/trainingService';
 import { Training } from '../services/personnelService';
@@ -28,8 +30,9 @@ export const TrainingHistoryModule = () => {
                 getTrainingRecords(),
                 getPersonnel()
             ]);
-            setTrainingList(data || []);
-            setEmployees(personnel || []);
+            const own = restrictToOwnPersonnel(data || [], (personnel || []) as any[], getAuthUser());
+            setTrainingList(own.records);
+            setEmployees(own.personnel);
         } catch (error) {
             console.error("Failed to fetch training history:", error);
         } finally {

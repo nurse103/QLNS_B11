@@ -76,3 +76,21 @@ export const canEditPersonnelRecord = (
     if (user.role === 'admin') return true;
     return isOwnPersonnelRecord(employee, user);
 };
+
+/** Vai trò "Người dùng" chỉ xem dữ liệu của chính mình; Quản trị viên, Quản lý xem tất cả */
+export const isRestrictedRole = (user: { role?: string } | null): boolean =>
+    !!user && user.role !== 'admin' && user.role !== 'manager';
+
+/**
+ * Lọc bản ghi nhân sự (lên lương, gia đình, đào tạo, công tác...) theo tài khoản:
+ * vai trò Người dùng chỉ giữ hồ sơ trùng họ tên với mình và bản ghi của hồ sơ đó.
+ */
+export const restrictToOwnPersonnel = <
+    R extends { dsnv_id?: number | null },
+    E extends { id?: number | null; ho_va_ten?: string | null },
+>(records: R[], personnel: E[], user: { role?: string; full_name?: string | null } | null) => {
+    if (!isRestrictedRole(user)) return { records, personnel };
+    const own = personnel.filter(e => isOwnPersonnelRecord(e, user));
+    const ids = new Set(own.map(e => e.id));
+    return { records: records.filter(r => r.dsnv_id != null && ids.has(r.dsnv_id)), personnel: own };
+};

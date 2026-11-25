@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getAuthUser } from '../services/authService';
+import { restrictToOwnPersonnel } from '../utils/ownershipUtils';
 import { getWorkHistoryRecords, createWorkHistoryRecord, updateWorkHistoryRecord, deleteWorkHistoryRecord, bulkUpdateChucVuDang, WorkHistoryRecord } from '../services/workHistoryService';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { CHUC_VU_DANG_GOI_Y } from '../services/partyService';
@@ -33,8 +35,9 @@ export const WorkHistoryModule = () => {
                 getWorkHistoryRecords(),
                 getPersonnel()
             ]);
-            setHistoryList(history || []);
-            setEmployees(personnel || []);
+            const own = restrictToOwnPersonnel(history || [], (personnel || []) as any[], getAuthUser());
+            setHistoryList(own.records);
+            setEmployees(own.personnel);
         } catch (error) {
             console.error("Failed to fetch data:", error);
         } finally {

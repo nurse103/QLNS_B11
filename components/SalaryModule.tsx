@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getAuthUser } from '../services/authService';
+import { restrictToOwnPersonnel } from '../utils/ownershipUtils';
 import { getSalaryRecords, createSalaryRecord, updateSalaryRecord, deleteSalaryRecord, SalaryRecord } from '../services/salaryService';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { Plus, Search, Edit, Trash2, X, Save, DollarSign, ChevronRight } from 'lucide-react';
@@ -30,8 +32,9 @@ export const SalaryModule = () => {
                 getSalaryRecords(),
                 getPersonnel()
             ]);
-            setSalaryRecords(salaries || []);
-            setEmployees(personnel || []);
+            const own = restrictToOwnPersonnel(salaries || [], (personnel || []) as any[], getAuthUser());
+            setSalaryRecords(own.records);
+            setEmployees(own.personnel);
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {

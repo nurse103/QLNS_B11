@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getAuthUser } from '../services/authService';
+import { restrictToOwnPersonnel } from '../utils/ownershipUtils';
 import { getFamilyRecords, createFamilyRecord, updateFamilyRecord, deleteFamilyRecord, FamilyRecord } from '../services/familyService';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { Plus, Search, Edit, Trash2, X, Save, Users, ChevronRight, Heart } from 'lucide-react';
@@ -23,8 +25,9 @@ export const FamilyModule = () => {
                 getFamilyRecords(),
                 getPersonnel()
             ]);
-            setFamilyRecords(families || []);
-            setEmployees(personnel || []);
+            const own = restrictToOwnPersonnel(families || [], (personnel || []) as any[], getAuthUser());
+            setFamilyRecords(own.records);
+            setEmployees(own.personnel);
         } catch (error) {
             console.error("Failed to fetch data", error);
         } finally {
