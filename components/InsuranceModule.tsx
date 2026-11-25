@@ -322,6 +322,12 @@ export const InsuranceModule = () => {
         LOAI_DE_NGHI.map(l => ({ l, n: list.filter(x => effectiveLoai(x) === l).length }));
     const yearList = tab === 'ca_nhan' ? caNhanYear : thanNhanYear;
 
+    /** Thân nhân còn thiếu thông tin ở một trong các cột (trừ cột Nữ) → tô đỏ cả dòng */
+    const thieuThongTin = (x: BhytThanNhan) =>
+        [x.dsnv?.ho_va_ten, x.moi_quan_he, x.ho_va_ten, x.ngay_sinh, x.cccd, x.xa_phuong, x.tinh, x.noi_kcb, x.ma_so_bhyt, x.sd_tu_ngay, x.sd_den_ngay]
+            .some(v => !String(v ?? '').trim());
+    const RED = ' text-red-600 [&_*]:!text-red-600';
+
     const actionBtns = (item: BhytCaNhan | BhytThanNhan) => (
         <div className="flex items-center justify-center gap-1">
             <button onClick={() => setExportIds([item.id!])} className="p-1.5 text-green-700 hover:bg-green-50 rounded" title="Xuất mẫu cho người này"><FileText size={16} /></button>
@@ -513,7 +519,7 @@ export const InsuranceModule = () => {
                         {loading ? <div className="py-10 text-center text-slate-500">Đang tải...</div>
                             : thanNhanView.length === 0 ? <div className="py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</div>
                                 : thanNhanView.map(x => (
-                                    <div key={x.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                                    <div key={x.id} className={`bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2${thieuThongTin(x) ? RED : ''}`}>
                                         <div className="flex justify-between items-start gap-2">
                                             <input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 mt-1 accent-[#009900] shrink-0" />
                                             <div className="flex-1">
@@ -557,7 +563,7 @@ export const InsuranceModule = () => {
                                     ) : thanNhanView.length === 0 ? (
                                         <tr><td colSpan={11} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
                                     ) : thanNhanView.map((x, i) => (
-                                        <tr key={x.id} className={selected.has(x.id!) ? 'bg-green-50/60' : 'hover:bg-slate-50/60'}>
+                                        <tr key={x.id} className={(selected.has(x.id!) ? 'bg-green-50/60' : 'hover:bg-slate-50/60') + (thieuThongTin(x) ? RED : '')}>
                                             <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 accent-[#009900] cursor-pointer" /></td>
                                             <td className="px-3 py-2.5 text-slate-500">{i + 1}</td>
                                             <td className="px-3 py-2.5 whitespace-nowrap">
