@@ -123,6 +123,12 @@ export const InsuranceModule = () => {
         return text.some(t => (t || '').toLowerCase().includes(q));
     };
 
+    /** Sắp xếp theo tên (chữ cuối), rồi họ đệm, kiểu danh sách tiếng Việt */
+    const soSanhTenVN = (a?: string | null, b?: string | null) => {
+        const sa = String(a ?? '').trim().split(/\s+/), sb = String(b ?? '').trim().split(/\s+/);
+        return (sa[sa.length - 1] || '').localeCompare(sb[sb.length - 1] || '', 'vi')
+            || sa.join(' ').localeCompare(sb.join(' '), 'vi');
+    };
     const caNhanYear = caNhan.filter(x => x.nam === nam);
     const thanNhanYear = thanNhan.filter(x => x.nam === nam);
 
@@ -135,8 +141,8 @@ export const InsuranceModule = () => {
     const thanNhanView = thanNhanYear
         .filter(x => !loaiFilter || effectiveLoai(x) === loaiFilter)
         .filter(x => matches([x.ho_va_ten, x.dsnv?.ho_va_ten, x.ma_so_bhyt, x.cccd, x.noi_kcb, x.moi_quan_he]))
-        .sort((a, b) => LOAI_DE_NGHI.indexOf(effectiveLoai(a)) - LOAI_DE_NGHI.indexOf(effectiveLoai(b))
-            || (a.dsnv?.ho_va_ten || '').localeCompare(b.dsnv?.ho_va_ten || '', 'vi')
+        .sort((a, b) => soSanhTenVN(a.dsnv?.ho_va_ten, b.dsnv?.ho_va_ten)
+            || (a.dsnv_id || 0) - (b.dsnv_id || 0)
             || (a.id || 0) - (b.id || 0));
 
     // ===== Actions =====
