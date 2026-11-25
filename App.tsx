@@ -51,6 +51,7 @@ import { PersonnelList } from './components/PersonnelList';
 
 import { WorkHistoryModule } from './components/WorkHistoryModule';
 import { TrainingHistoryModule } from './components/TrainingHistoryModule';
+import { InsuranceModule } from './components/InsuranceModule';
 import { CCHNModule } from './components/CCHNModule';
 import { NCKHModule } from './components/NCKHModule';
 import { usePermissions } from './hooks/usePermissions';
@@ -951,6 +952,7 @@ function App() {
               <Route path="/personnel/history" element={<WorkHistoryModule />} />
               <Route path="/personnel/training" element={<TrainingHistoryModule />} />
               <Route path="/personnel/certs" element={<CCHNModule />} />
+              <Route path="/personnel/insurance" element={<InsuranceModule />} />
 
               {/* Placeholders for other routes based on requirements */}
               <Route path="/personnel" element={<PlaceholderPage title="Module Nhân sự" />} />
