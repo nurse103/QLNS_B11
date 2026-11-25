@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { BhytCaNhan, BhytThanNhan, LOAI_DE_NGHI, LoaiDeNghi, MANUAL_LOAI, autoLoai } from '../services/bhytService';
+import { BhytCaNhan, BhytThanNhan, LOAI_DE_NGHI, LoaiDeNghi, autoLoai } from '../services/bhytService';
 import { Employee } from '../services/personnelService';
 
 /** Chuẩn hóa tên để so khớp: NFC, bỏ khoảng trắng thừa, chữ thường */
@@ -147,7 +147,7 @@ const eachDataRow = (
 
 /** Mục: III–VI theo file (chỉ có ở mẫu chính thức); còn lại tự xếp theo hạn sử dụng */
 const pickLoai = (fromFile: LoaiDeNghi | null, sdDen: string | null, nam: number): LoaiDeNghi =>
-    fromFile && MANUAL_LOAI.includes(fromFile) ? fromFile : autoLoai(sdDen, nam);
+    fromFile || autoLoai(sdDen, nam);
 
 export const parseBhytFile = async (
     file: File,

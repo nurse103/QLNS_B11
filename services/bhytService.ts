@@ -15,8 +15,7 @@ export const LOAI_DE_NGHI_SHORT: Record<LoaiDeNghi, string> = {
     VII: 'Cấp mới, tăng mới',
 };
 
-/** Mục chọn tay (không tự xếp theo hạn sử dụng) */
-export const MANUAL_LOAI: LoaiDeNghi[] = ['III', 'IV', 'V', 'VI'];
+const isLoai = (v: unknown): v is LoaiDeNghi => (LOAI_DE_NGHI as readonly string[]).includes(v as string);
 
 /**
  * Tự xếp mục theo hạn sử dụng (HSD đến) so với năm đề nghị:
@@ -32,9 +31,16 @@ export const autoLoai = (sdDenNgay: string | null | undefined, nam: number): Loa
     return 'VII';
 };
 
-/** Mục thực tế của bản ghi: III–VI giữ theo lựa chọn, còn lại xếp theo HSD */
+/**
+ * Mục thực tế của bản ghi: giữ đúng mục đã lưu (I–VII). Khi chọn "Tự động",
+ * mục được tính theo HSD lúc lưu; bản ghi chưa có mục hợp lệ thì xếp theo HSD.
+ */
 export const effectiveLoai = (x: { loai_de_nghi?: string | null; sd_den_ngay?: string | null; nam: number }): LoaiDeNghi =>
-    MANUAL_LOAI.includes(x.loai_de_nghi as LoaiDeNghi) ? x.loai_de_nghi as LoaiDeNghi : autoLoai(x.sd_den_ngay, x.nam);
+    isLoai(x.loai_de_nghi) ? x.loai_de_nghi : autoLoai(x.sd_den_ngay, x.nam);
+
+/** Giá trị hiển thị trong ô "Mục đề nghị" của form: 'AUTO' nếu mục trùng với mục tự xếp */
+export const formLoaiValue = (x: { loai_de_nghi?: string | null; sd_den_ngay?: string | null; nam: number }): LoaiDeNghi | 'AUTO' =>
+    isLoai(x.loai_de_nghi) && x.loai_de_nghi !== autoLoai(x.sd_den_ngay, x.nam) ? x.loai_de_nghi : 'AUTO';
 
 const norm = (s: any) => String(s ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLowerCase();
 

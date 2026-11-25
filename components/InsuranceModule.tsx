@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { HeartPulse, Users, User, Plus, Search, Edit, Trash2, X, Save, FileSpreadsheet, Copy, Upload } from 'lucide-react';
+import { HeartPulse, Users, User, Plus, Search, Edit, Trash2, X, Save, FileSpreadsheet, Copy, Upload, FileText, FileDown } from 'lucide-react';
 import { parseBhytFile } from '../utils/bhytImport';
 import { getPersonnel, Employee } from '../services/personnelService';
 import { getFamilyRecords, FamilyRecord } from '../services/familyService';
 import {
     bhytCaNhanApi, bhytThanNhanApi, BhytCaNhan, BhytThanNhan,
-    LOAI_DE_NGHI, LOAI_DE_NGHI_SHORT, LoaiDeNghi, MANUAL_LOAI, autoLoai, effectiveLoai, thanNhanKey,
+    LOAI_DE_NGHI, LOAI_DE_NGHI_SHORT, LoaiDeNghi, autoLoai, effectiveLoai, formLoaiValue, thanNhanKey,
 } from '../services/bhytService';
 import { exportMau04a, exportMau04b, formatDateVN } from '../utils/bhytExport';
+import { exportMau01A, exportMau01C, exportMau03A, exportMau04, mauGoiY } from '../utils/bhytForms';
 import { usePermissions } from '../hooks/usePermissions';
+import { getAuthUser } from '../services/authService';
+import { isOwnPersonnelRecord } from '../utils/ownershipUtils';
 
 type Tab = 'ca_nhan' | 'than_nhan';
 
@@ -41,11 +44,26 @@ const Field = ({ label, children, className = '' }: { label: string; children: R
 
 export const InsuranceModule = () => {
     const { can_add, can_edit, can_delete } = usePermissions('p-insurance');
+    const authUser = useMemo(() => getAuthUser(), []);
+    /** Tài khoản "Nhân viên" chỉ xem BHYT của chính mình và thân nhân mình; quản trị viên, quản lý xem tất cả */
+    const restricted = !!authUser && authUser.role !== 'admin' && authUser.role !== 'manager';
     const [tab, setTab] = useState<Tab>('ca_nhan');
-    const [caNhan, setCaNhan] = useState<BhytCaNhan[]>([]);
-    const [thanNhan, setThanNhan] = useState<BhytThanNhan[]>([]);
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [families, setFamilies] = useState<FamilyRecord[]>([]);
+    const [allCaNhan, setCaNhan] = useState<BhytCaNhan[]>([]);
+    const [allThanNhan, setThanNhan] = useState<BhytThanNhan[]>([]);
+    const [allEmployees, setEmployees] = useState<Employee[]>([]);
+    const [allFamilies, setFamilies] = useState<FamilyRecord[]>([]);
+
+    // Lọc theo tài khoản: hồ sơ nhân viên khớp họ tên với tài khoản đang đăng nhập
+    const ownIds = useMemo(
+        () => new Set(allEmployees.filter(e => isOwnPersonnelRecord(e, authUser)).map(e => e.id)),
+        [allEmployees, authUser],
+    );
+    const visible = <T extends { dsnv_id?: number | null }>(list: T[]) =>
+        restricted ? list.filter(x => x.dsnv_id != null && ownIds.has(x.dsnv_id)) : list;
+    const caNhan = useMemo(() => visible(allCaNhan), [allCaNhan, ownIds, restricted]);
+    const thanNhan = useMemo(() => visible(allThanNhan), [allThanNhan, ownIds, restricted]);
+    const families = useMemo(() => visible(allFamilies), [allFamilies, ownIds, restricted]);
+    const employees = useMemo(() => restricted ? allEmployees.filter(e => ownIds.has(e.id)) : allEmployees, [allEmployees, ownIds, restricted]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -120,8 +138,8 @@ export const InsuranceModule = () => {
     };
 
     const openEdit = (item: BhytCaNhan | BhytThanNhan) => {
-        // Mục I/II/VII là mục tự xếp theo hạn sử dụng
-        setForm({ ...item, loai_de_nghi: MANUAL_LOAI.includes(item.loai_de_nghi) ? item.loai_de_nghi : 'AUTO' });
+        // Mục trùng với mục tự xếp theo hạn sử dụng → hiển thị "Tự động"
+        setForm({ ...item, loai_de_nghi: formLoaiValue(item) });
         setModalOpen(true);
     };
 
@@ -142,7 +160,7 @@ export const InsuranceModule = () => {
         try {
             const api: any = tab === 'ca_nhan' ? bhytCaNhanApi : bhytThanNhanApi;
             const payload = { ...form, nam: Number(form.nam), dsnv_id: Number(form.dsnv_id) };
-            if (!MANUAL_LOAI.includes(payload.loai_de_nghi)) payload.loai_de_nghi = autoLoai(payload.sd_den_ngay, payload.nam);
+            if (!LOAI_DE_NGHI.includes(payload.loai_de_nghi)) payload.loai_de_nghi = autoLoai(payload.sd_den_ngay, payload.nam);
             if (tab === 'than_nhan' && !payload.gia_dinh_id) payload.gia_dinh_id = null;
             if (form.id) await api.update(form.id, payload);
             else await api.create(payload);
@@ -246,9 +264,39 @@ export const InsuranceModule = () => {
         }
     };
 
-    const handleExport = () => {
-        if (tab === 'ca_nhan') exportMau04b(caNhanYear, nam);
-        else exportMau04a(thanNhanYear, nam);
+    // ===== Chọn người & xuất mẫu =====
+    const [selected, setSelected] = useState<Set<number>>(new Set());
+    const [exportIds, setExportIds] = useState<number[] | null>(null);
+    useEffect(() => { setSelected(new Set()); }, [tab, nam]);
+
+    const toggleSelect = (id?: number) => {
+        if (!id) return;
+        setSelected(prev => {
+            const next = new Set(prev);
+            next.has(id) ? next.delete(id) : next.add(id);
+            return next;
+        });
+    };
+    const viewIds = (tab === 'ca_nhan' ? caNhanView : thanNhanView).map(x => x.id!).filter(Boolean);
+    const allChecked = viewIds.length > 0 && viewIds.every(id => selected.has(id));
+    const toggleAll = () => setSelected(allChecked ? new Set() : new Set(viewIds));
+
+    const exportRecords = (exportIds || [])
+        .map(id => (tab === 'ca_nhan' ? caNhanYear : thanNhanYear).find(x => x.id === id))
+        .filter(Boolean) as (BhytCaNhan | BhytThanNhan)[];
+
+    const runExport = (mau: '01A' | '01C' | '04' | '03A' | '04a' | '04b') => {
+        try {
+            if (mau === '01A') exportMau01A(exportRecords as BhytCaNhan[], employees);
+            if (mau === '01C') exportMau01C(exportRecords as BhytThanNhan[], employees, families, nam);
+            if (mau === '04') exportMau04(exportRecords as BhytThanNhan[], employees);
+            if (mau === '03A') exportMau03A(caNhanYear, thanNhanYear, employees, nam);
+            if (mau === '04a') exportMau04a(thanNhanYear, nam);
+            if (mau === '04b') exportMau04b(caNhanYear, nam);
+        } catch (err: any) {
+            console.error(err);
+            alert('Xuất mẫu thất bại: ' + (err?.message || ''));
+        }
     };
 
     // Khi chọn thân nhân từ "Quan hệ gia đình" → điền sẵn thông tin
@@ -276,6 +324,7 @@ export const InsuranceModule = () => {
 
     const actionBtns = (item: BhytCaNhan | BhytThanNhan) => (
         <div className="flex items-center justify-center gap-1">
+            <button onClick={() => setExportIds([item.id!])} className="p-1.5 text-green-700 hover:bg-green-50 rounded" title="Xuất mẫu cho người này"><FileText size={16} /></button>
             {can_edit && <button onClick={() => openEdit(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Sửa"><Edit size={16} /></button>}
             {can_delete && <button onClick={() => handleDelete(item.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xóa"><Trash2 size={16} /></button>}
         </div>
@@ -323,6 +372,14 @@ export const InsuranceModule = () => {
                 </div>
             )}
 
+            {restricted && !loading && (
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+                    {ownIds.size
+                        ? <>Tài khoản của bạn chỉ xem được thẻ BHYT của bản thân và thân nhân mình.</>
+                        : <>Chưa tìm thấy hồ sơ nhân viên trùng họ tên với tài khoản <b>{authUser?.full_name || authUser?.username}</b>, nên chưa có thông tin BHYT để hiển thị. Liên hệ quản trị viên để cập nhật họ tên tài khoản.</>}
+                </div>
+            )}
+
             {/* Thống kê theo mục */}
             <div className="flex flex-wrap gap-2">
                 <button onClick={() => setLoaiFilter('')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${loaiFilter === '' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200'}`}>
@@ -337,7 +394,8 @@ export const InsuranceModule = () => {
             </div>
 
             <p className="text-xs text-slate-500 -mt-2">
-                Mục I, II, VII tự xếp theo hạn sử dụng thẻ (HSD đến): còn hạn năm {nam} trở đi → I; hết hạn năm {nam - 1} → II; hết hạn trước đó hoặc chưa có thẻ → VII. Mục III–VI chọn khi sửa từng người.
+                Chọn "Tự động" thì mục xếp theo hạn sử dụng thẻ (HSD đến): còn hạn năm {nam} trở đi → I; hết hạn năm {nam - 1} → II; hết hạn trước đó hoặc chưa có thẻ → VII. Có thể chọn tay bất kỳ mục I–VII khi sửa từng người.
+                Tích chọn người rồi bấm <b>Xuất mẫu</b> để in Mẫu {tab === 'ca_nhan' ? '01A' : '01C / 04'}; lý do đề nghị lấy theo mục và ghi chú.
             </p>
 
             {/* Toolbar */}
@@ -348,12 +406,12 @@ export const InsuranceModule = () => {
                         placeholder={tab === 'ca_nhan' ? 'Tìm tên, mã BHXH, CCCD...' : 'Tìm tên thân nhân, quân nhân, mã số...'}
                         className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#009900] shadow-sm" />
                 </div>
-                {can_add && (
+                {can_add && !restricted && (
                     <button onClick={handleCopyFromPrevYear} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap" title={`Sao chép danh sách năm ${nam - 1} sang năm ${nam}`}>
                         <Copy size={16} /> Từ năm {nam - 1}
                     </button>
                 )}
-                {can_add && (
+                {can_add && !restricted && (
                     <>
                         <button onClick={() => importInputRef.current?.click()} disabled={importing}
                             className="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-sm font-medium hover:bg-blue-100 flex items-center gap-2 shadow-sm whitespace-nowrap disabled:opacity-50"
@@ -363,8 +421,8 @@ export const InsuranceModule = () => {
                         <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
                     </>
                 )}
-                <button onClick={handleExport} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap">
-                    <FileSpreadsheet size={16} className="text-green-700" /> Xuất {tab === 'ca_nhan' ? 'Mẫu 04b' : 'Mẫu 04a'}
+                <button onClick={() => setExportIds(Array.from(selected))} className="px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2 shadow-sm whitespace-nowrap">
+                    <FileDown size={16} className="text-green-700" /> Xuất mẫu{selected.size ? ` (${selected.size} người)` : ''}
                 </button>
                 {can_add && (
                     <button onClick={openAdd} className="px-4 py-2 bg-[#009900] text-white rounded-lg text-sm font-medium hover:bg-[#007700] flex items-center gap-2 shadow-md whitespace-nowrap">
@@ -382,7 +440,8 @@ export const InsuranceModule = () => {
                                 : caNhanView.map(x => (
                                     <div key={x.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
                                         <div className="flex justify-between items-start gap-2">
-                                            <div>
+                                            <input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 mt-1 accent-[#009900] shrink-0" />
+                                            <div className="flex-1">
                                                 <div className="font-bold text-slate-900">{x.dsnv?.ho_va_ten}</div>
                                                 <div className="text-xs text-slate-500">{x.dsnv?.cap_bac || ''} · {formatDateVN(x.dsnv?.ngay_sinh)}</div>
                                             </div>
@@ -404,6 +463,7 @@ export const InsuranceModule = () => {
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-[#009900] text-white font-bold uppercase text-[11px] tracking-wider">
                                     <tr>
+                                        <th className="px-3 py-3 w-8"><input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-white cursor-pointer" title="Chọn tất cả" /></th>
                                         <th className="px-3 py-3 w-10">TT</th>
                                         <th className="px-3 py-3">Họ và tên</th>
                                         <th className="px-3 py-3">Cấp bậc</th>
@@ -416,16 +476,17 @@ export const InsuranceModule = () => {
                                         <th className="px-3 py-3">SĐT</th>
                                         <th className="px-3 py-3">Giá trị thẻ</th>
                                         <th className="px-3 py-3">Mục</th>
-                                        <th className="px-3 py-3 text-center w-20">Thao tác</th>
+                                        <th className="px-3 py-3 text-center w-28">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading ? (
-                                        <tr><td colSpan={13} className="px-6 py-10 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
+                                        <tr><td colSpan={14} className="px-6 py-10 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
                                     ) : caNhanView.length === 0 ? (
-                                        <tr><td colSpan={13} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
+                                        <tr><td colSpan={14} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
                                     ) : caNhanView.map((x, i) => (
-                                        <tr key={x.id} className="hover:bg-slate-50/60">
+                                        <tr key={x.id} className={selected.has(x.id!) ? 'bg-green-50/60' : 'hover:bg-slate-50/60'}>
+                                            <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 accent-[#009900] cursor-pointer" /></td>
                                             <td className="px-3 py-2.5 text-slate-500">{i + 1}</td>
                                             <td className="px-3 py-2.5 font-bold text-slate-900 whitespace-nowrap">{x.dsnv?.ho_va_ten}</td>
                                             <td className="px-3 py-2.5 text-slate-600">{x.dsnv?.cap_bac || ''}</td>
@@ -457,7 +518,8 @@ export const InsuranceModule = () => {
                                 : thanNhanView.map(x => (
                                     <div key={x.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
                                         <div className="flex justify-between items-start gap-2">
-                                            <div>
+                                            <input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 mt-1 accent-[#009900] shrink-0" />
+                                            <div className="flex-1">
                                                 <div className="font-bold text-slate-900">{x.ho_va_ten} <span className="text-pink-600 font-medium text-sm">({x.moi_quan_he || '---'})</span></div>
                                                 <div className="text-xs text-slate-500">Quân nhân: <b>{x.dsnv?.ho_va_ten}</b> {x.dsnv?.cap_bac ? `· ${x.dsnv.cap_bac}` : ''}</div>
                                             </div>
@@ -479,6 +541,7 @@ export const InsuranceModule = () => {
                             <table className="w-full text-sm text-left">
                                 <thead className="bg-[#009900] text-white font-bold uppercase text-[11px] tracking-wider">
                                     <tr>
+                                        <th className="px-3 py-3 w-8"><input type="checkbox" checked={allChecked} onChange={toggleAll} className="w-4 h-4 accent-white cursor-pointer" title="Chọn tất cả" /></th>
                                         <th className="px-3 py-3 w-10">TT</th>
                                         <th className="px-3 py-3">Quân nhân</th>
                                         <th className="px-3 py-3">Quan hệ</th>
@@ -491,16 +554,17 @@ export const InsuranceModule = () => {
                                         <th className="px-3 py-3">Nơi KCB</th>
                                         <th className="px-3 py-3">Giá trị thẻ</th>
                                         <th className="px-3 py-3">Mục</th>
-                                        <th className="px-3 py-3 text-center w-20">Thao tác</th>
+                                        <th className="px-3 py-3 text-center w-28">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading ? (
-                                        <tr><td colSpan={13} className="px-6 py-10 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
+                                        <tr><td colSpan={14} className="px-6 py-10 text-center text-slate-500">Đang tải dữ liệu...</td></tr>
                                     ) : thanNhanView.length === 0 ? (
-                                        <tr><td colSpan={13} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
+                                        <tr><td colSpan={14} className="px-6 py-10 text-center text-slate-500 italic">Chưa có dữ liệu năm {nam}.</td></tr>
                                     ) : thanNhanView.map((x, i) => (
-                                        <tr key={x.id} className="hover:bg-slate-50/60">
+                                        <tr key={x.id} className={selected.has(x.id!) ? 'bg-green-50/60' : 'hover:bg-slate-50/60'}>
+                                            <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(x.id!)} onChange={() => toggleSelect(x.id)} className="w-4 h-4 accent-[#009900] cursor-pointer" /></td>
                                             <td className="px-3 py-2.5 text-slate-500">{i + 1}</td>
                                             <td className="px-3 py-2.5 whitespace-nowrap">
                                                 <div className="font-bold text-slate-900">{x.dsnv?.ho_va_ten}</div>
@@ -526,6 +590,73 @@ export const InsuranceModule = () => {
                 </>
             )}
 
+            {/* ===== Hộp thoại xuất mẫu ===== */}
+            {exportIds && (() => {
+                const isCN = tab === 'ca_nhan';
+                const goiY = new Set(exportRecords.map(x => mauGoiY(tab, effectiveLoai(x))).filter(Boolean));
+                const personal = isCN
+                    ? [{ id: '01A' as const, title: 'Mẫu 01A/BHYT-QĐ', desc: 'Tờ khai tham gia, điều chỉnh thông tin BHYT (cá nhân kê khai). Mục VII điền phần I; các mục khác điền phần II.' }]
+                    : [
+                        { id: '01C' as const, title: 'Mẫu 01C/BHYT-QĐ', desc: 'Tờ khai thân nhân (đề nghị cấp thẻ BHYT mới). Mỗi quân nhân 1 file Excel, thân nhân xếp theo mục.' },
+                        { id: '04' as const, title: 'Mẫu 04/BHYT-QĐ', desc: 'Đơn đề nghị cấp lại, cấp đổi, gia hạn có thay đổi thông tin. Mỗi thân nhân 1 trang, lý do lấy theo mục + ghi chú.' },
+                    ];
+                const unit = [
+                    { id: (isCN ? '04b' : '04a') as '04a' | '04b', title: `Mẫu ${isCN ? '04b' : '04a'}/BHYT-QĐ`, desc: `Danh sách đơn vị tổng hợp ${isCN ? 'quân nhân, CCQP, VCQP, LĐHĐ' : 'thân nhân'} năm ${nam} (Excel).` },
+                    { id: '03A' as const, title: 'Mẫu 03A/BHYT-QĐ', desc: `Công văn đề nghị cấp thẻ BHYT năm ${nam}, tự đếm số lượng theo mục của cả cá nhân và thân nhân (Word).` },
+                ];
+                const Btn = ({ m, disabled }: { m: { id: any; title: string; desc: string }; disabled?: boolean }) => (
+                    <button type="button" disabled={disabled} onClick={() => runExport(m.id)}
+                        className={`w-full text-left p-3 rounded-xl border flex gap-3 items-start transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${goiY.has(m.id) ? 'border-[#009900] bg-green-50/70 hover:bg-green-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                        <FileDown size={18} className="text-green-700 mt-0.5 shrink-0" />
+                        <span className="flex-1">
+                            <span className="font-semibold text-slate-800 text-sm">{m.title}</span>
+                            {goiY.has(m.id) && <span className="ml-2 text-[10px] font-bold uppercase text-[#009900]">Phù hợp mục đã chọn</span>}
+                            <span className="block text-xs text-slate-500 mt-0.5">{m.desc}</span>
+                        </span>
+                    </button>
+                );
+                return (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setExportIds(null)}>
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                                <h3 className="font-bold text-lg text-slate-800">Xuất mẫu BHYT {isCN ? 'cá nhân' : 'thân nhân'} – năm {nam}</h3>
+                                <button onClick={() => setExportIds(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"><X size={20} /></button>
+                            </div>
+                            <div className="p-6 space-y-4 max-h-[78vh] overflow-y-auto">
+                                <div>
+                                    <div className={labelCls}>Mẫu cá nhân kê khai – theo người đã chọn ({exportRecords.length})</div>
+                                    {exportRecords.length ? (
+                                        <div className="mt-2 max-h-36 overflow-y-auto rounded-lg border border-slate-100 divide-y divide-slate-100">
+                                            {exportRecords.map(x => (
+                                                <div key={x.id} className="px-3 py-1.5 text-sm flex items-center justify-between gap-2">
+                                                    <span className="truncate">
+                                                        {isCN ? <b>{x.dsnv?.ho_va_ten}</b>
+                                                            : <><b>{(x as BhytThanNhan).ho_va_ten}</b> <span className="text-pink-600">({(x as BhytThanNhan).moi_quan_he})</span> <span className="text-slate-400 text-xs">– {x.dsnv?.ho_va_ten}</span></>}
+                                                        {x.ghi_chu ? <span className="block text-[11px] text-slate-500 italic truncate">Ghi chú: {x.ghi_chu}</span> : null}
+                                                    </span>
+                                                    <LoaiBadge loai={effectiveLoai(x)} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-2 text-xs text-slate-500 italic">Chưa chọn ai. Tích ô ở đầu dòng {isCN ? 'nhân viên' : 'thân nhân'} hoặc bấm biểu tượng xuất mẫu ở từng dòng.</p>
+                                    )}
+                                    <div className="mt-2 space-y-2">
+                                        {personal.map(m => <Btn key={m.id} m={m} disabled={!exportRecords.length} />)}
+                                    </div>
+                                </div>
+                                <div className="pt-3 border-t border-slate-100">
+                                    <div className={labelCls}>Mẫu đơn vị tổng hợp – toàn bộ danh sách năm {nam}</div>
+                                    <div className="mt-2 space-y-2">
+                                        {unit.map(m => <Btn key={m.id} m={m} />)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
             {/* ===== Modal thêm / sửa ===== */}
             {modalOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -550,7 +681,7 @@ export const InsuranceModule = () => {
                                 <Field label="Mục đề nghị *">
                                     <select required value={form.loai_de_nghi || 'AUTO'} onChange={e => setForm({ ...form, loai_de_nghi: e.target.value })} className={inputCls}>
                                         <option value="AUTO">Tự động theo hạn sử dụng ({(() => { const l = autoLoai(form.sd_den_ngay, Number(form.nam) || nam); return `${l}. ${LOAI_DE_NGHI_SHORT[l]}`; })()})</option>
-                                        {MANUAL_LOAI.map(l => <option key={l} value={l}>{l}. {LOAI_DE_NGHI_SHORT[l]}</option>)}
+                                        {LOAI_DE_NGHI.map(l => <option key={l} value={l}>{l}. {LOAI_DE_NGHI_SHORT[l]}</option>)}
                                     </select>
                                 </Field>
                             </div>
