@@ -125,7 +125,19 @@ const currentUserId = () => {
     return user?.id ?? null;
 };
 
-const makeCrud = <T extends { id?: number; dsnv?: DsnvRef }>(table: string) => ({
+/** Cột được phép ghi của từng bảng (khớp create_bhyt_tables.sql) — trường thừa trên form sẽ bị bỏ */
+const COLUMNS: Record<string, string[]> = {
+    bhyt_ca_nhan: ['dsnv_id', 'nam', 'loai_de_nghi', 'ma_so_bhxh', 'xa_phuong', 'tinh', 'noi_kcb',
+        'so_dien_thoai', 'sd_tu_ngay', 'sd_den_ngay', 'ghi_chu'],
+    bhyt_than_nhan: ['dsnv_id', 'gia_dinh_id', 'nam', 'loai_de_nghi', 'moi_quan_he', 'ho_va_ten', 'cccd',
+        'ma_so_bhyt', 'ngay_sinh', 'gioi_tinh', 'xa_phuong', 'tinh', 'noi_kcb', 'noi_cu_tru', 'anh_bhyt',
+        'so_dien_thoai', 'sd_tu_ngay', 'sd_den_ngay', 'ghi_chu'],
+};
+
+const makeCrud = <T extends { id?: number; dsnv?: DsnvRef }>(table: string) => {
+    const pick = (record: any) => sanitizeData(Object.fromEntries(
+        COLUMNS[table].filter(k => k in record).map(k => [k, record[k]])));
+    return {
     list: async (nam?: number): Promise<T[]> => {
         let q = supabase.from(table).select(`*, ${DSNV_SELECT}`);
         if (nam) q = q.eq('nam', nam);
@@ -137,10 +149,9 @@ const makeCrud = <T extends { id?: number; dsnv?: DsnvRef }>(table: string) => (
         return (data || []) as T[];
     },
     create: async (record: Partial<T>) => {
-        const { dsnv, id, created_at, ...payload } = record as any;
         const { data, error } = await supabase
             .from(table)
-            .insert([{ ...sanitizeData(payload), created_by: currentUserId() }])
+            .insert([{ ...pick(record), created_by: currentUserId() }])
             .select()
             .single();
         if (error) throw error;
@@ -148,18 +159,14 @@ const makeCrud = <T extends { id?: number; dsnv?: DsnvRef }>(table: string) => (
     },
     bulkCreate: async (records: Partial<T>[]) => {
         const uid = currentUserId();
-        const rows = records.map(r => {
-            const { dsnv, id, ...payload } = r as any;
-            return { ...sanitizeData(payload), created_by: uid };
-        });
+        const rows = records.map(r => ({ ...pick(r), created_by: uid }));
         const { error } = await supabase.from(table).insert(rows);
         if (error) throw error;
     },
     update: async (id: number, record: Partial<T>) => {
-        const { dsnv, id: _id, created_by, created_at, ...payload } = record as any;
         const { data, error } = await supabase
             .from(table)
-            .update(sanitizeData(payload))
+            .update(pick(record))
             .eq('id', id)
             .select()
             .single();
@@ -170,7 +177,8 @@ const makeCrud = <T extends { id?: number; dsnv?: DsnvRef }>(table: string) => (
         const { error } = await supabase.from(table).delete().eq('id', id);
         if (error) throw error;
     },
-});
+    };
+};
 
 export const bhytCaNhanApi = makeCrud<BhytCaNhan>('bhyt_ca_nhan');
 export const bhytThanNhanApi = makeCrud<BhytThanNhan>('bhyt_than_nhan');
