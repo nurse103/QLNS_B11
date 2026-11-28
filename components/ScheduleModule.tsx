@@ -5,6 +5,7 @@ import { getPersonnel, Employee } from '../services/personnelService';
 import { Plus, Search, Calendar as CalendarIcon, Edit, Trash2, FileSpreadsheet, Download, Upload, X, Save, Filter, BarChart3, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { usePermissions } from '../hooks/usePermissions';
+import { DutyRosterImport } from './DutyRosterImport';
 
 export const ScheduleModule = () => {
     const { can_add, can_edit, can_delete } = usePermissions('duty_schedule');
@@ -25,6 +26,7 @@ export const ScheduleModule = () => {
     // Let's auto-switch the "View Month" when clicking "Today".
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isRosterImportOpen, setIsRosterImportOpen] = useState(false);
     const [isNurseDropdownOpen, setIsNurseDropdownOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<DutySchedule>>({});
 
@@ -436,6 +438,11 @@ export const ScheduleModule = () => {
                             </button>
                         )}
                         {can_add && (
+                            <button onClick={() => setIsRosterImportOpen(true)} className="flex-1 md:flex-none justify-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2 text-sm font-medium shadow-sm" title="Nhập từ file bảng phân trực theo khoảng ngày, xem trước rồi mới lưu">
+                                <Upload size={18} /> <span className="hidden sm:inline">Nhập lịch trực</span><span className="sm:hidden">Nhập</span>
+                            </button>
+                        )}
+                        {can_add && (
                             <div className="relative flex-1 md:flex-none">
                                 <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                                 <button className="w-full justify-center px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 flex items-center gap-2 text-sm font-medium shadow-sm">
@@ -762,6 +769,9 @@ export const ScheduleModule = () => {
                         </div>
                     </div>
                 </div>
+            )}
+            {isRosterImportOpen && (
+                <DutyRosterImport onClose={() => setIsRosterImportOpen(false)} onSaved={() => fetchData()} />
             )}
         </div>
     );

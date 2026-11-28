@@ -100,3 +100,15 @@ export const bulkCreateDutySchedules = async (schedules: Omit<DutySchedule, 'id'
 
     return data as DutySchedule[];
 };
+
+/** Lịch trực trong khoảng ngày (YYYY-MM-DD, gồm cả 2 đầu) */
+export const getDutySchedulesRange = async (from: string, to: string) => {
+    const { data, error } = await supabase
+        .from('lich_truc')
+        .select('*')
+        .gte('ngay_truc', from)
+        .lte('ngay_truc', to)
+        .order('ngay_truc', { ascending: true });
+    if (error) throw error;
+    return data as DutySchedule[];
+};
